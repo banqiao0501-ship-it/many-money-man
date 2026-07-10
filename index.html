@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大富翁共用輔助機台 - 神秘事件版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body::-webkit-scrollbar { display: none; }
+        body { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen flex flex-col justify-between p-4 select-none">
+
+    <div id="setup-screen" class="max-w-xl mx-auto my-auto w-full bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+        <h1 class="text-3xl font-bold text-center mb-8 text-gray-900 tracking-wider">🎲 大富翁輔助機台</h1>
+        
+        <div class="grid grid-cols-2 gap-6 mb-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-500 mb-2">玩家人數 (2-8人)</label>
+                <select id="player-count" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-gray-400" onchange="renderSetupPlayers()">
+                    <option value="2">2 人</option>
+                    <option value="3">3 人</option>
+                    <option value="4" selected>4 人</option>
+                    <option value="5">5 人</option>
+                    <option value="6">6 人</option>
+                    <option value="7">7 人</option>
+                    <option value="8">8 人</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-500 mb-2">初始金額</label>
+                <input id="initial-money" type="number" step="1000" value="15000" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-gray-400 font-mono text-lg">
+            </div>
+        </div>
+
+        <div class="flex items-center justify-center gap-3 mb-8 bg-purple-50 p-4 rounded-xl border border-purple-100">
+            <input type="checkbox" id="mystery-mode" class="w-5 h-5 text-purple-600 rounded focus:ring-purple-500 cursor-pointer">
+            <label for="mystery-mode" class="font-bold text-purple-800 cursor-pointer">🔮 啟用神秘事件</label>
+        </div>
+
+        <hr class="border-gray-100 mb-6">
+        <div id="setup-players-list" class="space-y-4 max-h-96 overflow-y-auto pr-2 mb-8"></div>
+        <button onclick="startGame()" class="w-full bg-gray-900 hover:bg-gray-800 text-white font-medium py-4 rounded-xl transition duration-200 shadow-sm tracking-widest text-lg">開始遊戲</button>
+    </div>
+
+    <div id="game-screen" class="hidden flex-1 flex flex-col justify-between h-full w-full max-w-7xl mx-auto gap-4">
+        <div class="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+            <div class="text-lg font-bold text-gray-800 tracking-wide">🏛️ 數位銀行中心</div>
+            <div class="flex gap-3">
+                <button onclick="toggleLog()" class="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition">交易紀錄</button>
+                <button onclick="undoLastTransaction()" class="px-4 py-2 text-sm bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition">↩ 復原上筆</button>
+            </div>
+        </div>
+
+        <div class="flex-1 grid grid-cols-3 gap-4 my-2">
+            <div id="left-players" class="flex flex-col gap-3 justify-center"></div>
+            
+            <div class="flex flex-col justify-center items-center relative">
+                <div id="loan-shark-ui" class="hidden w-full max-w-[200px] bg-red-50 border-2 border-red-200 text-red-800 p-3 rounded-xl text-center mb-3 shadow-sm flex-col justify-between items-center transition-all">
+                    <span class="text-xs font-bold mb-1">🏦 高利貸起點專戶</span>
+                    <span id="loan-shark-amt" class="text-lg font-mono font-bold mb-2">$0</span>
+                    <button id="btn-claim-loan" onclick="claimLoanShark()" class="hidden w-full bg-red-600 hover:bg-red-700 text-white text-sm font-bold py-2 rounded-lg transition shadow-sm">提領全額 (15000)</button>
+                </div>
+
+                <div class="flex flex-col gap-4 justify-center items-center bg-white rounded-2xl border border-gray-100 p-6 shadow-sm w-full relative">
+                    <div id="prompt-msg" class="text-sm font-medium text-gray-400 text-center mb-2">請點擊玩家開始轉帳</div>
+                    <button id="btn-bank" onclick="selectParticipant('bank')" class="w-full max-w-[180px] bg-gray-800 text-white p-4 rounded-xl text-center font-bold tracking-widest hover:bg-gray-700 transition shadow-sm">🏦 銀行</button>
+                    
+                    <div class="grid grid-cols-2 gap-4 mb-6 w-full">
+                        <button onclick="drawCardEvent('機會')" class="bg-red-500 hover:bg-red-600 text-white font-bold p-4 rounded-xl text-center shadow-sm">❓ 機會</button>
+                        <button onclick="drawCardEvent('命運')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold p-4 rounded-xl text-center shadow-sm">❗️ 命運</button>
+                    </div>
+
+                    <div class="w-full bg-gray-50 p-4 rounded-xl border border-gray-200 flex flex-col items-center gap-4">
+                        <span class="text-sm font-bold text-gray-400">🎲 線上骰子區</span>
+                        <div class="flex gap-4 text-5xl text-gray-800 select-none" id="dice-display">
+                            <div id="dice-1" class="transition-transform">⚀</div>
+                            <div id="dice-2" class="transition-transform">⚀</div>
+                        </div>
+                        <p id="dice-result-text" class="text-base font-bold text-gray-800 h-6">準備擲骰</p>
+                        <button onclick="rollDice()" class="w-full py-2 bg-gray-800 hover:bg-gray-900 text-white font-bold rounded-lg transition-all active:scale-95 shadow-sm">擲骰子</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="right-players" class="flex flex-col gap-3 justify-center"></div>
+        </div>
+    </div>
+
+    <div id="card-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl border text-center">
+            <div id="card-modal-type" class="text-xs font-bold tracking-widest uppercase mb-4 px-3 py-1 rounded-full inline-block"></div>
+            <div id="card-modal-text" class="text-lg font-bold text-gray-900 my-6 leading-relaxed"></div>
+            <div id="card-action-zone" class="bg-gray-50 p-4 rounded-xl mb-6 hidden">
+                <p id="card-action-msg" class="text-xs text-gray-400 mb-2">💡 請選擇執行玩家（自動連動金錢）：</p>
+                <div id="card-target-players" class="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto"></div>
+            </div>
+            <button onclick="closeCardModal()" class="w-full bg-gray-900 hover:bg-gray-800 text-white font-medium py-3 rounded-xl transition">確認並關閉</button>
+        </div>
+    </div>
+
+    <div id="hand-card-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl border text-center">
+            <div class="text-xs font-bold tracking-widest uppercase mb-2 px-3 py-1 rounded-full inline-block bg-indigo-100 text-indigo-800 border border-indigo-300">🎟️ <span id="hc-owner"></span></div>
+            <div id="hc-text" class="text-lg font-bold text-gray-900 my-6 leading-relaxed"></div>
+            <div class="flex gap-4 mt-6">
+                <button onclick="closeHandCardModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 rounded-xl transition">收回口袋</button>
+                <button onclick="useHandCard()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl transition shadow-sm">發動此卡！</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="mystery-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-[60]">
+        <div class="bg-purple-900 rounded-3xl p-8 w-full max-w-md shadow-2xl border-4 border-purple-400 text-center relative overflow-hidden">
+            <div class="text-sm font-bold tracking-widest uppercase mb-4 px-4 py-1.5 rounded-full inline-block bg-purple-300 text-purple-900 shadow-[0_0_15px_rgba(216,180,254,0.6)]">⚠ 警告：神秘事件觸發 ⚠</div>
+            <div id="mystery-modal-text" class="text-xl font-bold text-white my-6 leading-relaxed relative z-10"></div>
+            <button onclick="closeMysteryModal()" class="w-full bg-purple-500 hover:bg-purple-400 text-purple-900 font-bold py-3 rounded-xl transition shadow-lg">確認並關閉</button>
+        </div>
+    </div>
+
+    <div id="keyboard-modal" class="hidden fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-40">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl border border-gray-100">
+            <div class="text-center mb-4"><span id="kb-payer-name" class="font-bold px-3 py-1 rounded-lg"></span><span class="text-gray-400 mx-2">➔</span><span id="kb-payee-name" class="font-bold px-3 py-1 rounded-lg"></span></div>
+            <div id="kb-display" class="text-right text-4xl font-mono font-bold border-b-2 border-gray-200 pb-2 mb-4 text-gray-900">0</div>
+            <div class="grid grid-cols-3 gap-2 mb-4">
+                <button id="btn-pass-start" onclick="handlePassStart()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-2 rounded-lg text-sm border border-indigo-200 shadow-sm transition">🏁 通過起點！<br>(+3000)</button>
+                <button onclick="addAmount(1000)" class="bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg text-sm font-bold">+1000</button>
+                <button onclick="addAmount(500)" class="bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg text-sm font-bold">+500</button>
+            </div>
+            <div class="grid grid-cols-3 gap-3 mb-4 font-mono text-xl">
+                <button onclick="pressNum('1')" class="bg-gray-50 hover:bg-gray-100 py-3 rounded-xl font-bold">1</button>
+                <button onclick="pressNum('2')" class="bg-gray-50 hover:bg-gray-100 py-3 rounded-xl font-bold">2</button>
+                <button onclick="pressNum('3')" class="bg-gray-50 hover:bg-gray-100 py-3 rounded-xl font-bold">3</button>
+                <button onclick="pressNum('4')" class="bg-gray-50 hover:bg-gray-100 py-3 rounded-xl font-bold">4</button>
+                <button onclick="pressNum('5')" class="bg-gray-50 hover:bg-gray-100 py-3 rounded-xl font-bold">5</button>
+                <button onclick="pressNum('6')" class="bg-gray-50 hover:bg-gray-100 py-3 rounded-xl font-bold">6</button>
+                <button onclick="pressNum('7')" class="bg-gray-50 hover:bg-gray-100 py-3 rounded-xl font-bold">7</button>
+                <button onclick="pressNum('8')" class="bg-gray-50 hover:bg-gray-100 py-3 rounded-xl font-bold">8</button>
+                <button onclick="pressNum('9')" class="bg-gray-50 hover:bg-gray-100 py-3 rounded-xl font-bold">9</button>
+                <button onclick="pressNum('C')" class="bg-red-50 hover:bg-red-100 text-red-600 py-3 rounded-xl font-bold">C</button>
+                <button onclick="pressNum('0')" class="bg-gray-50 hover:bg-gray-100 py-3 rounded-xl font-bold">0</button>
+                <button onclick="pressNum('00')" class="bg-gray-50 hover:bg-gray-100 py-3 rounded-xl font-bold">00</button>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="closeKeyboard()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-3 rounded-xl">取消</button>
+                <button onclick="executeTransaction()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-3 rounded-xl shadow-sm">確認轉帳</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="log-panel" class="hidden fixed top-0 right-0 h-full w-80 bg-white shadow-2xl border-l border-gray-100 p-6 flex flex-col justify-between z-[70]">
+        <div>
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-bold">交易紀錄歷史</h3>
+                <button onclick="toggleLog()" class="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+            </div>
+            <div id="log-list" class="space-y-3 max-h-[80vh] overflow-y-auto font-mono text-sm pr-1"></div>
+        </div>
+    </div>
+
+    <script>
+        const COLORS = [
+            { name: '珊瑚紅', bg: 'bg-red-100', border: 'border-red-400', text: 'text-red-700', raw: '#fca5a5' },
+            { name: '莫蘭迪藍', bg: 'bg-blue-100', border: 'border-blue-400', text: 'text-blue-700', raw: '#93c5fd' },
+            { name: '薄荷綠', bg: 'bg-emerald-100', border: 'border-emerald-400', text: 'text-emerald-700', raw: '#6ee7b7' },
+            { name: '芥末黃', bg: 'bg-amber-100', border: 'border-amber-400', text: 'text-amber-700', raw: '#fcd34d' },
+            { name: '薰衣草紫', bg: 'bg-purple-100', border: 'border-purple-400', text: 'text-purple-700', raw: '#d8b4fe' },
+            { name: '泰奶橘', bg: 'bg-orange-100', border: 'border-orange-400', text: 'text-orange-700', raw: '#fdba74' },
+            { name: '玫瑰粉', bg: 'bg-pink-100', border: 'border-pink-400', text: 'text-pink-700', raw: '#f9a8d4' },
+            { name: '青石灰', bg: 'bg-slate-200', border: 'border-slate-400', text: 'text-slate-700', raw: '#cbd5e1' }
+        ];
+
+        // 基礎牌庫
+        const MY_CUSTOM_DECKS = {
+            "機會": [
+                { text: "【強制開法許可】\n在你擁有的土地中，選擇價值最低的土地立即蓋出一棟「旅館」。", value: 0 },
+                { text: "【土地併購案】\n你可以以「定價的1.5倍」強制收購任何一位玩家名下沒有建築的土地。(請手動轉帳)", value: 0 },
+                { text: "【專車接送】\n任意移動到一個地點(不論遠近)，並且可以依舊可以執行動作(購買土地、升級房屋等)。", value: 0 },
+                { text: "【免死金牌】\n遇到其他機會&命運牌的負面效果時，可以使用此牌使負面效果無效。(此牌可留存於手中)", value: 0, keepable: true },
+                { text: "【保險基金】\n當你必須支付超過 2,000 元的過路費時，銀行會幫你負擔 50% 的金額。(此牌可留存於手中，請手動計算與轉帳)", value: 0, keepable: true },
+                { text: "【逆向行駛】\n從現在起開始反方向繞地圖行走。", value: 0 },
+                { text: "【惡意併購】\n當你停留在其他玩家的土地上時，可以選擇以土地原價的3倍金額強制將該土地收購為己有。(此牌可留存於手中，請手動轉帳)", value: 0, keepable: true },
+                { text: "【內線交易】\n指定一位玩家名下未蓋建築的土地，與你名下未蓋建築的土地進行強制交換(不補差額)。(此牌可留存於手中)", value: 0, keepable: true },
+                { text: "【拆遷大隊】\n任選一個顏色區塊的所有建築下降1級。", value: 0 },
+                { text: "【討債集團】\n當任何玩家踩到你名下的土地時，對他收取3倍過路費。(此牌可留存於手中)", value: 0, keepable: true },
+                { text: "【強制課稅】\n呼叫稅務局！所有玩家，每擁有一棟房屋上繳 1,000 元給銀行，每擁有一棟旅館上繳 5,000 元給銀行。(請自行計算後手動轉帳)", value: 0 },
+                { text: "【商業間諜】\n指定一位玩家，奪取他手上的所有功能牌。", value: 0 },
+                { text: "【高鐵特快車】\n在你的回合，可以不擲骰子，直接移動到地圖上的任意一格未被購買的土地並直接購買(若有通過起點可領取起點獎金)。(此牌可留存於手中)", value: 0, keepable: true },
+                { text: "【引力陷阱】\n將所有玩家傳送到你目前所在的格子上，並且被傳送的玩家仍需繳交過路費。(請手動轉帳)", value: 0 },
+                { text: "【強制導航】\n你可以指定下一位玩家擲骰子的總點數。", value: 0 },
+                { text: "【罷工抗議】\n指定地圖上任一顏色區塊的土地，在三個回合內「關閉營業」，無法收取過路費，也無法進行任何房屋升級。", value: 0 },
+                { text: "【藍圖修改器】\n任意移動自己的一棟建築到其他土地上，並且支付 1,000 元施工費。(此牌可留存於手中)", value: -1000, keepable: true },
+                { text: "【F1賽車】\n下一回合所有玩家的擲骰點數乘2倍。", value: 0 },
+		{ text: "【發票中大獎】\n你對中了本期的統一發票特獎！請立刻向銀行領取 3,000 元獎金。", value: 3000 },
+		{ text: "【天降橫財】\n你在路上撿到一個裝滿錢的公事包，等了半天沒人來認領，只好自己收下了。獲得 4,000 元！(請點選下方按鈕領取)", value: 4000 },
+		{ text: "【生日派對】\n今天是你的生日！在場的其他每位玩家都必須包 1,000 元紅包給你當作賀禮。(請手動向每位玩家收款)", value: 0 },
+		{ text: "【投資分紅】\n你早期投資的AI科技公司股票大漲！銀行發放 5,000 元的現金分紅給你。", value: 5000 },
+		{ text: "【國家紓困金】\n所有現金低於 5,000 元的玩家，銀行將立刻發放 10,000 元的緊急紓困補助給你！(若符合資格請手動向銀行領款)", value: 0 }
+            ],
+            "命運": [
+                { text: "【板塊運動】\n該玩家位置的一整排土地格(不包含角落格)遭遇地震，建築物等級下降1級 (空地不變)。", value: 0 },
+                { text: "【通貨膨脹】\n接下來三輪內，所有過路費皆變為2倍。", value: 0 },
+                { text: "【森林大火】\n距離目前玩家的所在位置前方最近的建築物，被森林大火夷為平地(退回空地狀態)。", value: 0 },
+                { text: "【金融風暴】\n股市崩盤！所有玩家上繳 5,000 元給銀行。(請點選下方按鈕執行)", value: -5000 },
+                { text: "【都市大斷電】\n所有擁有建築物的土地都在這回合失去效力，僅須支付「空地」過路費。", value: 0 },
+                { text: "【經濟大蕭條】\n所有建有建築物的土地「過路費減半」，直到目前玩家再次回到起點時結束。", value: 0 },
+                { text: "【賭徒本色】\n命運的十字路口！你可以選擇：\n(a) 什麼都不做，直接棄牌。\n(b) 與任意一位對手進行生死擲骰決鬥，點數大的可以從點數小的人手中拿取 10,000 元現金。(請手動轉帳)", value: 0 },
+                { text: "【惡性通膨】\n所有人通過起點的獎金翻倍，但同時購買土地及升級房屋的成本也翻倍。", value: 0 },
+                { text: "【強制都更】\n該玩家位置往前數三塊已出售的土地，其土地可免費增加一棟房屋。", value: 0 },
+                { text: "【資產清算】\n所有玩家結算現金，現金最多的玩家給予最少的玩家 5,000 元。(請手動轉帳)", value: 0 },
+                { text: "【班機延誤】\n暫停兩回合。(期間仍可收取過路費)", value: 0 },
+		{ text: "【強颱來襲】\n呼～～～你被颱風往後吹了 10 格。", value: 0 },
+                { text: "【黑天鵝事件】\n任選一名玩家，將你們兩人的所有現金總額相加，然後平分。(請自行計算後手動轉帳)", value: 0 },
+                { text: "【封路條款】\n該玩家位置的一整排土地格(不包含角落格)進行路面整修，任何經過的玩家都要上繳 1,000 元工地過路費，施工持續至該玩家回到起點。", value: 0 },
+                { text: "【強制徵收令】\n擁有最多房地產的玩家，被政府強制拆除一棟價值最高的建築(降一級)。", value: 0 },
+		{ text: "【慈善家】\n你必須將自己名下「價值最高」的一塊土地，無條件過戶給目前現金最少的玩家。", value: 0 },
+		{ text: "【愛情ㄟ恰恰】\n從現在開始，骰骰子到「奇數」代表後退；骰到「偶數」代表前進，效果持續至回到起點。", value: 0 },
+		{ text: "【才藝秀】\n進行任何搞笑表演，只要成功逗笑至少兩位玩家，即可向銀行申請 5,000 元通告費。(請手動向銀行領款)", value: 0 },
+		{ text: "【神秘招財儀式】\n請起立，原地轉三圈，雙手舉高並大喊「我是大富翁！」，然後優雅地坐下繼續遊戲，並獎勵 10 元。", value: 0 },
+		{ text: "【聖誕貓】\n在你的下次回合前，其他玩家跟你講話時，都只能發出「喵」的聲音來回應。", value: 0 },
+		{ text: "【瘋狂樂透迷】\n你可以選擇花費 5,000 元購買樂透：擲一枚骰子，若點數為 1 或 6，可獲得 30,000 元；其餘點數則獎金歸零。(請自行擲骰並手動轉帳)", value: 0 },
+                { text: "【稅務審計】\n指定一位玩家，在接下來的三回合中，對該玩家徵收1.5倍過路費(僅對抽卡者有效)。", value: 0 }
+
+            ]
+        };
+
+        const MYSTERY_EVENTS = [
+            { id: 'loan_shark', text: "【高利貸循環】\n從現在起，經過起點不再領取 3,000 元獎金，而是轉為支付 3,000 元利息於起點專用帳戶。\n當帳戶湊滿 15,000 元時，下一個經過起點的玩家可全額領取。" },
+            { id: 'class_reversal', text: "【階級翻轉】\n現金最多的玩家和現金最少的玩家進行身家交換！\n(請在下方選擇兩位玩家進行金錢與手牌交換，土地與建築物請使用實體物件交換)" },
+            { id: 'lottery', text: "【大樂透頭獎】\n每人上繳 5,000 元(資產不足 5,000 元者上繳所有資產，並由銀行補貼至 5,000 元)作為樂透基金，所有人擲骰子比大小，數字最大的玩家獲得所有獎金！\n(若有點數相同者，重新擲骰至比出勝負為止，請在下方選擇獲勝者發放)" },
+            { id: 'meteor', text: "【隕石撞地球】\n隕石將一切夷為平地，請移除地圖上的所有建築物！" },
+            { id: 'robin_hood', text: "【劫富濟貧】\n將現在場上的價值最高的三塊土地(包含建築物價值)，全部歸為持有土地最少的玩家所有！" },
+            { id: 'musical_deeds', text: "【地契大風吹】\n玩家上繳所有地契，進行洗牌後依照上繳數量重新分配！\n(上繳一張地契就只會分配到一張，由銀行隨機發配)" }
+        ];
+
+        
+        let players = [];
+        let selectedColorIndices = {};
+        let transactionHistory = [];
+        let transferState = { payer: null, payee: null };
+        let currentAmountStr = "0";
+        
+        let currentDrawnCard = null; 
+        let viewingHandCard = { playerId: null, idx: null, card: null }; 
+
+        // 神秘事件變數
+        let isMysteryMode = false;
+        let mysteryX = 0;
+        let mysteryN = 0;
+        let isLoanSharkActive = false;
+        let loanSharkPool = 0;
+
+        // 骰子變數
+        const DICE_FACES = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+        let isRolling = false; 
+
+        // ==========================================
+        // 初始化與啟動
+        // ==========================================
+        function renderSetupPlayers() {
+            const count = parseInt(document.getElementById('player-count').value);
+            const container = document.getElementById('setup-players-list');
+            
+            let existingNames = [];
+            for (let i = 0; i < 8; i++) {
+                let input = document.getElementById(`p-name-${i}`);
+                if (input) existingNames[i] = input.value;
+            }
+
+            container.innerHTML = '';
+            for (let i = 0; i < count; i++) {
+                if (selectedColorIndices[i] === undefined) selectedColorIndices[i] = i % COLORS.length;
+                let currentName = existingNames[i] !== undefined ? existingNames[i] : `玩家 ${i+1}`;
+                
+                let colorBadges = COLORS.map((color, cIdx) => 
+                    `<button id="color-btn-${i}-${cIdx}" onclick="selectColor(${i}, ${cIdx})" type="button" 
+                        class="w-6 h-6 rounded-full border-2 transition-all ${selectedColorIndices[i] === cIdx ? 'border-gray-900 scale-110 shadow-sm' : 'border-transparent opacity-60'}" 
+                        style="background-color: ${color.raw};"></button>`
+                ).join('');
+                
+                container.innerHTML += `
+                    <div class="p-4 bg-gray-50 rounded-xl border border-gray-100 flex flex-col gap-3">
+                        <div class="flex items-center gap-3">
+                            <span class="font-bold text-sm text-gray-400">#${i+1}</span>
+                            <input type="text" id="p-name-${i}" value="${currentName}" class="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm font-medium">
+                        </div>
+                        <div class="flex items-center gap-2 pl-7">
+                            <span class="text-xs text-gray-400 mr-2">代表色：</span>
+                            <div class="flex gap-1.5">${colorBadges}</div>
+                        </div>
+                    </div>`;
+            }
+        }
+
+        function selectColor(playerIdx, colorIdx) {
+            selectedColorIndices[playerIdx] = colorIdx; 
+            COLORS.forEach((_, c) => {
+                const btn = document.getElementById(`color-btn-${playerIdx}-${c}`);
+                if (btn) btn.className = `w-6 h-6 rounded-full border-2 transition-all ${c === colorIdx ? 'border-gray-900 scale-110 shadow-sm' : 'border-transparent opacity-60'}`;
+            });
+        }
+
+        function startGame() {
+            const count = parseInt(document.getElementById('player-count').value);
+            
+            const usedColors = new Set();
+            for (let i = 0; i < count; i++) {
+                if (usedColors.has(selectedColorIndices[i])) return alert("有人選到重複的顏色哦！");
+                usedColors.add(selectedColorIndices[i]);
+            }
+
+            const initMoney = parseInt(document.getElementById('initial-money').value) || 15000;
+            isMysteryMode = document.getElementById('mystery-mode').checked;
+            
+            if (isMysteryMode) {
+                mysteryX = 0;
+                let minN = count, maxN = Math.min(count * 3, 20);
+                mysteryN = Math.floor(Math.random() * (maxN - minN + 1)) + minN;
+            }
+
+            players = Array.from({ length: count }, (_, i) => ({
+                id: i, 
+                name: document.getElementById(`p-name-${i}`).value.trim() || `玩家 ${i+1}`, 
+                money: initMoney, 
+                color: COLORS[selectedColorIndices[i]], 
+                inventory: []
+            }));
+
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            renderGameBoard();
+        }
+
+        // ==========================================
+        // 渲染主畫面
+        // ==========================================
+        function renderGameBoard() {
+            const left = document.getElementById('left-players'), right = document.getElementById('right-players');
+            left.innerHTML = ''; right.innerHTML = '';
+            
+            players.forEach((p, idx) => {
+                let stateBorder = 'border-transparent';
+                if (transferState.payer?.id === p.id) stateBorder = 'border-red-500 ring-2 ring-red-500/20';
+                if (transferState.payee?.id === p.id) stateBorder = 'border-emerald-500 ring-2 ring-emerald-500/20';
+                
+                let inventoryTags = p.inventory.map((c, i) => {
+                    const title = c.text.match(/【(.*?)】/) ? c.text.match(/【(.*?)】/)[1] : '卡片';
+                    return `<button onclick="event.stopPropagation(); viewPlayerCard(${p.id}, ${i})" class="text-[11px] bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 px-2 py-1 rounded-md shadow-sm truncate max-w-[85px] transition">🎟️ ${title}</button>`;
+                }).join('');
+
+                const html = `
+                    <div onclick="selectParticipant(${p.id})" class="w-full bg-white p-4 rounded-2xl border-2 ${stateBorder} text-left shadow-sm transition-all duration-200 flex flex-col min-h-[7rem] relative overflow-hidden group cursor-pointer">
+                        <div class="absolute top-0 left-0 w-2 h-full ${p.color.bg}"></div>
+                        <div class="flex justify-between items-start w-full pl-2 mb-1">
+                            <span class="font-bold text-gray-800 text-lg">${p.name}</span>
+                            <span class="w-3 h-3 rounded-full mt-1.5" style="background-color:${p.color.raw}"></span>
+                        </div>
+                        <div class="text-right w-full font-mono font-bold text-2xl mb-2 ${p.money < 0 ? 'text-red-500 animate-pulse':'text-gray-900'}">${p.money < 0 ? '- ':''}$${Math.abs(p.money).toLocaleString()}</div>
+                        <div class="pl-2 flex flex-wrap gap-1 w-full mt-auto">${inventoryTags}</div>
+                    </div>`;
+                (idx % 2 === 0) ? left.innerHTML += html : right.innerHTML += html;
+            });
+            
+            document.getElementById('btn-bank').className = "w-full max-w-[180px] text-white p-4 rounded-xl text-center font-bold tracking-widest transition " + (transferState.payer === 'bank' ? 'bg-red-600 ring-2 ring-red-500/20' : transferState.payee === 'bank' ? 'bg-emerald-600 ring-2 ring-emerald-500/20' : 'bg-gray-800 hover:bg-gray-700');
+            
+            const prompt = document.getElementById('prompt-msg');
+            if (!transferState.payer) { 
+                prompt.innerText = "💡 請點擊【付款方】"; 
+                prompt.className = "text-sm font-medium text-red-400"; 
+            } else if (!transferState.payee) { 
+                prompt.innerText = `💡 誰要接收【${transferState.payer === 'bank' ? '銀行' : transferState.payer.name}】的錢？`; 
+                prompt.className = "text-sm font-medium text-emerald-500"; 
+            }
+
+            // 更新高利貸 UI
+            if (isLoanSharkActive) {
+                document.getElementById('loan-shark-ui').classList.remove('hidden');
+                document.getElementById('loan-shark-ui').classList.add('flex');
+                document.getElementById('loan-shark-amt').innerText = `$${loanSharkPool.toLocaleString()}`;
+                
+                if (loanSharkPool >= 15000) {
+                    document.getElementById('btn-claim-loan').classList.remove('hidden');
+                    document.getElementById('loan-shark-amt').classList.add('text-green-600');
+                } else {
+                    document.getElementById('btn-claim-loan').classList.add('hidden');
+                    document.getElementById('loan-shark-amt').classList.remove('text-green-600');
+                }
+            } else {
+                document.getElementById('loan-shark-ui').classList.add('hidden');
+                document.getElementById('loan-shark-ui').classList.remove('flex');
+            }
+        }
+
+        // ==========================================
+        // 金流與鍵盤系統
+        // ==========================================
+        function selectParticipant(target) {
+            const part = (target === 'bank') ? 'bank' : players.find(p => p.id === target);
+            if (!transferState.payer) { 
+                transferState.payer = part; 
+            } else if (!transferState.payee) { 
+                if (transferState.payer === part) transferState.payer = null; 
+                else { transferState.payee = part; openKeyboard(); }
+            }
+            renderGameBoard();
+        }
+
+        function openKeyboard() {
+            document.getElementById('kb-payer-name').innerText = transferState.payer === 'bank' ? '🏦 銀行' : transferState.payer.name;
+            document.getElementById('kb-payee-name').innerText = transferState.payee === 'bank' ? '🏦 銀行' : transferState.payee.name;
+            currentAmountStr = "0"; 
+            updateKeyboardDisplay();
+            
+            const btnStart = document.getElementById('btn-pass-start');
+            if (isLoanSharkActive) {
+                btnStart.innerHTML = "🚨 繳交利息！<br>(-3000)";
+                btnStart.className = "bg-red-50 hover:bg-red-100 text-red-700 font-bold py-2 rounded-lg text-sm border border-red-200 shadow-sm transition";
+            } else {
+                btnStart.innerHTML = "🏁 通過起點！<br>(+3000)";
+                btnStart.className = "bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-2 rounded-lg text-sm border border-indigo-200 shadow-sm transition";
+            }
+            document.getElementById('keyboard-modal').classList.remove('hidden');
+        }
+
+        function closeKeyboard() { 
+            document.getElementById('keyboard-modal').classList.add('hidden'); 
+            transferState = { payer: null, payee: null }; 
+            renderGameBoard(); 
+        }
+
+        function updateKeyboardDisplay() { 
+            document.getElementById('kb-display').innerText = parseInt(currentAmountStr).toLocaleString(); 
+        }
+
+        function pressNum(num) { 
+            if (num === 'C') { 
+                currentAmountStr = "0"; 
+            } else { 
+                if (currentAmountStr === "0") { 
+                    if (num === '0' || num === '00') return; 
+                    currentAmountStr = num; 
+                } else { 
+                    currentAmountStr += num; 
+                } 
+            } 
+            updateKeyboardDisplay(); 
+        }
+
+        function addAmount(num) { 
+            currentAmountStr = ((parseInt(currentAmountStr) || 0) + num).toString(); 
+            updateKeyboardDisplay(); 
+        }
+
+        function executeTransaction() {
+            const amount = parseInt(currentAmountStr);
+            if (amount <= 0) return;
+            
+            if (transferState.payer !== 'bank') transferState.payer.money -= amount;
+            if (transferState.payee !== 'bank') transferState.payee.money += amount;
+            
+            const pName = transferState.payer === 'bank' ? '🏦 銀行' : transferState.payer.name;
+            const pTarget = transferState.payee === 'bank' ? '🏦 銀行' : transferState.payee.name;
+            
+            transactionHistory.push({ 
+                payerId: transferState.payer === 'bank' ? 'bank' : transferState.payer.id, 
+                payeeId: transferState.payee === 'bank' ? 'bank' : transferState.payee.id, 
+                amount: amount, 
+                desc: `💸 轉帳 - ${pName} ➔ ${pTarget} : $${amount.toLocaleString()}` 
+            });
+            
+            checkMysteryCondition();
+            updateLogUI(); 
+            closeKeyboard();
+        }
+
+        function handlePassStart() {
+            let amount = 3000;
+            if (isLoanSharkActive) {
+                // 繳交利息
+                if (transferState.payee !== 'bank') transferState.payee.money -= amount;
+                loanSharkPool += amount;
+                transactionHistory.push({ payerId: transferState.payee === 'bank' ? 'bank' : transferState.payee.id, payeeId: 'pool', amount: amount, desc: `🚨 ${transferState.payee === 'bank' ? '銀行' : transferState.payee.name} 繳交高利貸利息 : $3,000` });
+            } else {
+                // 正常通過起點
+                if (transferState.payee !== 'bank') transferState.payee.money += amount;
+                transactionHistory.push({ payerId: 'bank', payeeId: transferState.payee === 'bank' ? 'bank' : transferState.payee.id, amount: amount, desc: `🏁 🏦 銀行 ➔ ${transferState.payee === 'bank' ? '銀行' : transferState.payee.name} (通過起點) : $3,000` });
+            }
+            
+            checkMysteryCondition();
+            updateLogUI();
+            closeKeyboard();
+        }
+
+        // ==========================================
+        // 抽卡與手牌系統
+        // ==========================================
+        function drawCardEvent(type) {
+            const deck = MY_CUSTOM_DECKS[type];
+            currentDrawnCard = deck[Math.floor(Math.random() * deck.length)];
+            
+            const modal = document.getElementById('card-modal');
+            const mType = document.getElementById('card-modal-type');
+            const mText = document.getElementById('card-modal-text');
+            const actionZone = document.getElementById('card-action-zone');
+            const actionMsg = document.getElementById('card-action-msg');
+            const targetContainer = document.getElementById('card-target-players');
+
+            mText.innerHTML = currentDrawnCard.text.replace(/\n/g, '<br>');
+            mType.innerText = type;
+            
+            if (type === "機會") mType.className = "text-xs font-bold tracking-widest uppercase mb-4 px-3 py-1 rounded-full inline-block bg-amber-100 text-amber-800 border border-amber-300";
+            else mType.className = "text-xs font-bold tracking-widest uppercase mb-4 px-3 py-1 rounded-full inline-block bg-blue-100 text-blue-800 border border-blue-300";
+
+            if (currentDrawnCard.keepable) {
+                actionZone.classList.remove('hidden');
+                actionMsg.innerText = "📥 這是一張可保留的功能卡，請選擇保管玩家：";
+                targetContainer.innerHTML = players.map(p => `<button onclick="assignCardToPlayer(${p.id})" class="py-2 text-xs font-medium border rounded-lg transition bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200">交給 ${p.name}</button>`).join('');
+            } else if (currentDrawnCard.value !== 0) {
+                actionZone.classList.remove('hidden');
+                actionMsg.innerText = "💡 立即結算事件，請選擇執行玩家：";
+                const isFine = currentDrawnCard.value < 0; 
+                const absValue = Math.abs(currentDrawnCard.value);
+                targetContainer.innerHTML = players.map(p => `<button onclick="executeCardPayout(${p.id}, ${currentDrawnCard.value}, false)" class="py-2 text-xs font-medium border rounded-lg transition ${isFine ? 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'}">${p.name} (${isFine ? '扣款' : '領取'} $${absValue})</button>`).join('');
+            } else { 
+                actionZone.classList.add('hidden'); 
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function assignCardToPlayer(playerId) {
+            const player = players.find(p => p.id === playerId);
+            player.inventory.push({ ...currentDrawnCard });
+            const title = currentDrawnCard.text.match(/【(.*?)】/) ? currentDrawnCard.text.match(/【(.*?)】/)[1] : '功能卡';
+            transactionHistory.push({ payerId: playerId, payeeId: playerId, amount: 0, desc: `📥 ${player.name} 收下 [${title}]` });
+            updateLogUI(); renderGameBoard(); closeCardModal();
+        }
+
+        function viewPlayerCard(playerId, idx) {
+            const player = players.find(p => p.id === playerId);
+            viewingHandCard = { playerId: playerId, idx: idx, card: player.inventory[idx] };
+            document.getElementById('hc-owner').innerText = player.name + " 的手牌";
+            document.getElementById('hc-text').innerHTML = viewingHandCard.card.text.replace(/\n/g, '<br>');
+            document.getElementById('hand-card-modal').classList.remove('hidden');
+        }
+
+        function closeHandCardModal() { document.getElementById('hand-card-modal').classList.add('hidden'); }
+
+        function useHandCard() {
+            const { playerId, idx, card } = viewingHandCard;
+            const player = players.find(p => p.id === playerId);
+            const title = card.text.match(/【(.*?)】/) ? card.text.match(/【(.*?)】/)[1] : '功能卡';
+            player.inventory.splice(idx, 1);
+            if (card.value !== 0) { executeCardPayout(playerId, card.value, true, title); } 
+            else { transactionHistory.push({ payerId: playerId, payeeId: playerId, amount: 0, desc: `✨ ${player.name} 發動了 [${title}]` }); updateLogUI(); renderGameBoard(); }
+            closeHandCardModal();
+        }
+
+        function executeCardPayout(playerId, value, isFromHand = false, cardName = "") {
+            const player = players.find(p => p.id === playerId);
+            const absValue = Math.abs(value);
+            const prefix = isFromHand ? `✨ 發動 [${cardName}]` : `🃏 抽卡事件`;
+            if (value < 0) {
+                player.money -= absValue;
+                transactionHistory.push({ payerId: playerId, payeeId: 'bank', amount: absValue, desc: `${prefix} - ${player.name} ➔ 🏦 銀行 : $${absValue.toLocaleString()}` });
+            } else {
+                player.money += absValue;
+                transactionHistory.push({ payerId: 'bank', payeeId: playerId, amount: absValue, desc: `${prefix} - 🏦 銀行 ➔ ${player.name} : $${absValue.toLocaleString()}` });
+            }
+            updateLogUI(); renderGameBoard();
+            if(!isFromHand) closeCardModal(); 
+        }
+
+        function closeCardModal() { document.getElementById('card-modal').classList.add('hidden'); }
+
+        // ==========================================
+        // 神秘事件系統
+        // ==========================================
+        function checkMysteryCondition() {
+            if (!isMysteryMode) return;
+            mysteryX++;
+            if (mysteryX >= mysteryN) {
+                triggerMysteryEvent();
+            }
+        }
+
+        function triggerMysteryEvent() {
+            const event = MYSTERY_EVENTS[Math.floor(Math.random() * MYSTERY_EVENTS.length)];
+            document.getElementById('mystery-modal-text').innerHTML = event.text.replace(/\n/g, '<br>');
+            document.getElementById('mystery-modal').classList.remove('hidden');
+            
+            if (event.id === 'loan_shark') {
+                isLoanSharkActive = true;
+                loanSharkPool = 0;
+            }
+
+            // 重置計數器與新目標
+            mysteryX = 0;
+            const count = players.length;
+            const minN = count;
+            const maxN = Math.min(count * 3, 20);
+            mysteryN = Math.floor(Math.random() * (maxN - minN + 1)) + minN;
+            
+            renderGameBoard();
+        }
+
+        function closeMysteryModal() { document.getElementById('mystery-modal').classList.add('hidden'); }
+
+        function claimLoanShark() {
+            if (!transferState.payee || transferState.payee === 'bank') {
+                alert("請先選擇要提領全額的【收款方】玩家！");
+                return;
+            }
+            
+            const player = transferState.payee;
+            player.money += loanSharkPool;
+            
+            transactionHistory.push({ payerId: 'pool', payeeId: player.id, amount: loanSharkPool, desc: `🎊 ${player.name} 提領了高利貸專戶全額 : $${loanSharkPool.toLocaleString()}` });
+            
+            isLoanSharkActive = false;
+            loanSharkPool = 0;
+            transferState = { payer: null, payee: null };
+            
+            updateLogUI();
+            renderGameBoard();
+        }
+
+        // ==========================================
+        // 線上骰子系統
+        // ==========================================
+        function rollDice() {
+            if (isRolling) return;
+            isRolling = true;
+
+            const dice1El = document.getElementById('dice-1');
+            const dice2El = document.getElementById('dice-2');
+            const resultText = document.getElementById('dice-result-text');
+            
+            let rolls = 0;
+            const maxRolls = 10; 
+            
+            dice1El.style.transform = `rotate(${Math.random() * 30 - 15}deg)`;
+            dice2El.style.transform = `rotate(${Math.random() * 30 - 15}deg)`;
+
+            const rollInterval = setInterval(() => {
+                let tempVal1 = Math.floor(Math.random() * 6);
+                let tempVal2 = Math.floor(Math.random() * 6);
+                
+                dice1El.innerText = DICE_FACES[tempVal1];
+                dice2El.innerText = DICE_FACES[tempVal2];
+                resultText.innerText = "擲骰中...";
+                resultText.className = "text-base font-bold text-gray-400 h-6";
+                
+                rolls++;
+
+                if (rolls >= maxRolls) {
+                    clearInterval(rollInterval);
+                    
+                    const finalVal1 = Math.floor(Math.random() * 6);
+                    const finalVal2 = Math.floor(Math.random() * 6);
+                    
+                    dice1El.innerText = DICE_FACES[finalVal1];
+                    dice2El.innerText = DICE_FACES[finalVal2];
+                    
+                    dice1El.style.transform = `rotate(0deg)`;
+                    dice2El.style.transform = `rotate(0deg)`;
+                    
+                    const total = (finalVal1 + 1) + (finalVal2 + 1);
+                    let text = `點數：${total}`;
+                    
+                    if (finalVal1 === finalVal2) {
+                        text += " (雙骰！)";
+                        resultText.className = "text-base font-bold text-red-500 h-6";
+                    } else {
+                        resultText.className = "text-base font-bold text-gray-800 h-6";
+                    }
+                    
+                    resultText.innerText = text;
+                    isRolling = false;
+                }
+            }, 60); 
+        }
+
+        // ==========================================
+        // 紀錄與通用工具
+        // ==========================================
+        function updateLogUI() {
+            const list = document.getElementById('log-list');
+            list.innerHTML = transactionHistory.slice().reverse().map((t, i) => `<div class="bg-gray-50 p-2 rounded border border-gray-100 text-gray-600">${t.desc}</div>`).join('');
+        }
+
+        function toggleLog() { 
+            document.getElementById('log-panel').classList.toggle('hidden'); 
+        }
+
+        function undoLastTransaction() {
+            if (transactionHistory.length === 0) return alert("沒有可以復原的紀錄了！");
+            
+            const lastTx = transactionHistory.pop();
+            if (lastTx.amount === 0 && lastTx.desc.includes("收下")) {
+                const p = players.find(x => x.id === lastTx.payerId);
+                p.inventory.pop();
+            } else if (lastTx.amount > 0) {
+                if (lastTx.payerId === 'pool') {
+                    loanSharkPool += lastTx.amount;
+                    isLoanSharkActive = true;
+                    if (lastTx.payeeId !== 'bank' && lastTx.payeeId !== 'pool') players.find(p => p.id === lastTx.payeeId).money -= lastTx.amount;
+                } else if (lastTx.payeeId === 'pool') {
+                    loanSharkPool -= lastTx.amount;
+                    if (lastTx.payerId !== 'bank' && lastTx.payerId !== 'pool') players.find(p => p.id === lastTx.payerId).money += lastTx.amount;
+                } else {
+                    if (lastTx.payerId !== 'bank') players.find(p => p.id === lastTx.payerId).money += lastTx.amount;
+                    if (lastTx.payeeId !== 'bank') players.find(p => p.id === lastTx.payeeId).money -= lastTx.amount;
+                }
+            }
+            updateLogUI(); renderGameBoard();
+        }
+    </script>
+</body>
+</html>
