@@ -496,7 +496,7 @@
         // ==========================================
         // 抽卡與手牌系統
         // ==========================================
-        function drawCardEvent(type) {
+function drawCardEvent(type) {
             const deck = MY_CUSTOM_DECKS[type];
             currentDrawnCard = deck[Math.floor(Math.random() * deck.length)];
             
@@ -507,6 +507,8 @@
             const actionMsg = document.getElementById('card-action-msg');
             const targetContainer = document.getElementById('card-target-players');
             
+            // 🎯【新增】在這裡順便抓取你的「確認並關閉」按鈕
+            // ⚠️ 備註：請確保 'confirm-close-btn' 有對應到你 HTML 彈窗裡那顆關閉按鈕的 id 唷！
             const closeBtn = document.getElementById('confirm-close-btn'); 
 
             mText.innerHTML = currentDrawnCard.text.replace(/\n/g, '<br>');
@@ -518,17 +520,19 @@
                 mType.className = "text-xs font-bold tracking-widest uppercase mb-4 px-3 py-1 rounded-full inline-block bg-blue-100 text-blue-800 border border-blue-300";
             }
 
+            // 🎯【新增】防呆大腦：判斷這張卡片是否需要玩家進行互動（選人、扣款或觸發特效）
             const isInteractive = currentDrawnCard.keepable || 
                                   currentDrawnCard.autoAction || 
                                   currentDrawnCard.value !== 0;
 
             if (closeBtn) {
                 if (isInteractive) {
-                    closeBtn.classList.add('hidden'); 
+                    closeBtn.classList.add('hidden');    // 📥 有互動按鈕 ➔ 隱藏關閉按鈕，防止玩家賴帳不按
                 } else {
-                    closeBtn.classList.remove('hidden');
+                    closeBtn.classList.remove('hidden'); // 📝 純文字卡片 ➔ 顯示關閉按鈕，看完了可以關掉
                 }
             }
+			
 if (currentDrawnCard.keepable) {
                 actionZone.classList.remove('hidden');
                 actionMsg.innerText = "📥 這是一張可保留的功能卡，請選擇保管玩家：";
