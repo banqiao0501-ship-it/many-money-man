@@ -507,9 +507,6 @@ function drawCardEvent(type) {
             const actionZone = document.getElementById('card-action-zone');
             const actionMsg = document.getElementById('card-action-msg');
             const targetContainer = document.getElementById('card-target-players');
-            
-            // 🎯【新增】在這裡順便抓取你的「確認並關閉」按鈕
-            // ⚠️ 備註：請確保 'confirm-close-btn' 有對應到你 HTML 彈窗裡那顆關閉按鈕的 id 唷！
             const closeBtn = document.getElementById('confirm-close-btn'); 
 
             mText.innerHTML = currentDrawnCard.text.replace(/\n/g, '<br>');
@@ -581,7 +578,7 @@ if (currentDrawnCard.keepable) {
                 actionMsg.innerText = "🕵️ 商業間諜！請指定「發動者」與「奪取目標」：";
                 
                 const options = players.map(p => {
-                    const cardCount = p.cards ? p.cards.length : 0;
+                    const cardCount = p.inventory ? p.inventory.length : 0;
                     return `<option value="${p.id}">👤 ${p.name} (持有 ${cardCount} 張牌)</option>`;
                 }).join('');
 
