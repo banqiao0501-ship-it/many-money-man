@@ -506,13 +506,29 @@
             const actionZone = document.getElementById('card-action-zone');
             const actionMsg = document.getElementById('card-action-msg');
             const targetContainer = document.getElementById('card-target-players');
+            
+            const closeBtn = document.getElementById('confirm-close-btn'); 
 
             mText.innerHTML = currentDrawnCard.text.replace(/\n/g, '<br>');
             mType.innerText = type;
             
-            if (type === "機會") mType.className = "text-xs font-bold tracking-widest uppercase mb-4 px-3 py-1 rounded-full inline-block bg-amber-100 text-amber-800 border border-amber-300";
-            else mType.className = "text-xs font-bold tracking-widest uppercase mb-4 px-3 py-1 rounded-full inline-block bg-blue-100 text-blue-800 border border-blue-300";
+            if (type === "機會") {
+                mType.className = "text-xs font-bold tracking-widest uppercase mb-4 px-3 py-1 rounded-full inline-block bg-amber-100 text-amber-800 border border-amber-300";
+            } else {
+                mType.className = "text-xs font-bold tracking-widest uppercase mb-4 px-3 py-1 rounded-full inline-block bg-blue-100 text-blue-800 border border-blue-300";
+            }
 
+            const isInteractive = currentDrawnCard.keepable || 
+                                  currentDrawnCard.autoAction || 
+                                  currentDrawnCard.value !== 0;
+
+            if (closeBtn) {
+                if (isInteractive) {
+                    closeBtn.classList.add('hidden'); 
+                } else {
+                    closeBtn.classList.remove('hidden');
+                }
+            }
 if (currentDrawnCard.keepable) {
                 actionZone.classList.remove('hidden');
                 actionMsg.innerText = "📥 這是一張可保留的功能卡，請選擇保管玩家：";
