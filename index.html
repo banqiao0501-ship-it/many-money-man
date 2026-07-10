@@ -678,7 +678,8 @@ if (currentDrawnCard.keepable) {
                     infoMessage += `📉 現金最少 (${minPlayers.length}人平分分配)：\n👉 ${minNames}（每人各獲得 $${gainPerMinPlayer}）`;
                     alert(infoMessage);
                 }
-				else if (currentDrawnCard.autoAction === "fair_share") {
+			}
+			else if (currentDrawnCard.autoAction === "fair_share") {
                 const checkboxes = document.querySelectorAll('input[name="fairSharePlayers"]:checked');
                 const id1 = parseInt(checkboxes[0].value);
                 const id2 = parseInt(checkboxes[1].value);
