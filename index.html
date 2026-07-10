@@ -193,8 +193,8 @@
                 { text: "【藍圖修改器】\n任意移動自己的一棟建築到其他土地上，並且支付 1,000 元施工費。(此牌可留存於手中)", value: -1000, keepable: true },
                 { text: "【F1賽車】\n下一回合所有玩家的擲骰點數乘2倍。", value: 0 },
 				{ text: "【發票中大獎】\n你對中了本期的統一發票特獎！請立刻向銀行領取 3,000 元獎金。", value: 3000 },
-				{ text: "【天降橫財】\n你在路上撿到一個裝滿錢的公事包，等了半天沒人來認領，只好自己收下了。獲得 4,000 元！(請點選下方按鈕領取)", value: 4000 },
-				{ text: "【生日派對】\n今天是你的生日！在場的其他每位玩家都必須包 1,000 元紅包給你當作賀禮。(請手動向每位玩家收款)", value: 0 },
+				{ text: "【天降橫財】\n你在路上撿到一個裝滿錢的公事包，等了半天沒人來認領，只好自己收下了。獲得 4,000 元！", value: 4000 },
+				{ text: "【生日派對】\n今天是你的生日！在場的其他每位玩家都必須包 1,000 元紅包給你當作賀禮。", value: 0, autoAction: "birthday" },
 				{ text: "【投資分紅】\n你早期投資的AI科技公司股票大漲！銀行發放 5,000 元的現金分紅給你。", value: 5000 },
 				{ text: "【國家紓困金】\n所有現金低於 5,000 元的玩家，銀行將立刻發放 10,000 元的緊急紓困補助給你！", value: 0, autoAction: "bailout" },
             ],
@@ -531,7 +531,8 @@
             }            modal.classList.remove('hidden');
         }
 
-		function executeAutoAction() {
+		function executeAutoAction(targetId = null) {
+            // 判斷 1：全自動紓困金
             if (currentDrawnCard.autoAction === "bailout") {
                 let bailoutCount = 0;
                 
@@ -555,9 +556,35 @@
                 } else {
                     alert(`🤷‍♂️ 結算完成！但目前沒有任何玩家的現金低於 5,000 元，無人獲得補助。`);
                 }
+
+            } 
+            // 判斷 2：半自動生日派對
+            else if (currentDrawnCard.autoAction === "birthday") {
+                const birthdayPerson = players.find(p => p.id === targetId);
+                const giftAmount = 1000;
+                const totalGifts = (players.length - 1) * giftAmount; 
+
+                // 從其他每位玩家身上扣除 1000 元
+                players.forEach(p => {
+                    if (p.id !== targetId) {
+                        p.money -= giftAmount;
+                        transactionHistory.push({
+                            payerId: p.id,
+                            payeeId: targetId,
+                            amount: giftAmount,
+                            desc: `🎁 賀禮 - ${p.name} ➔ ${birthdayPerson.name} : $1,000`
+                        });
+                    }
+                });
+
+                // 將紅包總額一次發給壽星
+                birthdayPerson.money += totalGifts;
+                
+                // 結算提示
+                alert(`🎉 生日快樂！已自動從其他 ${players.length - 1} 位玩家帳戶扣除 1,000 元，\n${birthdayPerson.name} 總共收到 ${totalGifts} 元的生日禮金！`);
             }
             
-            // 執行完畢後更新畫面並關閉視窗
+            // 【優化精簡】無論執行哪種自動事件，最後都共用這三行來更新畫面與關閉視窗
             updateLogUI(); 
             renderGameBoard();
             closeCardModal();
