@@ -618,9 +618,23 @@ if (currentDrawnCard.keepable) {
                 actionZone.classList.add('hidden'); 
             }            modal.classList.remove('hidden');
         }
+		
+		function checkSpySelect() {
+            const stealerId = document.getElementById('spy-stealer').value;
+            const targetId = document.getElementById('spy-target').value;
+            const submitBtn = document.getElementById('btnSpySubmit');
 
-		// 負責即時偵測勾選了幾個玩家，剛好 2 個人時才解鎖按鈕
-function handleFairShareSelect() {
+            if (stealerId && targetId && stealerId !== targetId) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "⚡ 執行奪取！";
+                submitBtn.className = "w-full py-3 text-sm font-bold border rounded-lg transition bg-purple-600 hover:bg-purple-700 text-white border-purple-700 shadow-sm";
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.innerText = (stealerId === targetId && stealerId !== "") ? "❌ 發動者與目標不能是同一人" : "請先選擇兩位不同的玩家";
+                submitBtn.className = "w-full py-3 text-sm font-bold border rounded-lg transition bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed shadow-sm";
+            }
+        }
+		function handleFairShareSelect() {
             const checkboxes = document.querySelectorAll('input[name="fairSharePlayers"]:checked');
             const submitBtn = document.getElementById('btnFairShareSubmit');
             
@@ -660,22 +674,34 @@ function handleFairShareSelect() {
                 }
 
             } 
-			//先放這，我不確定對不對
-			function checkSpySelect() {
-            const stealerId = document.getElementById('spy-stealer').value;
-            const targetId = document.getElementById('spy-target').value;
-            const submitBtn = document.getElementById('btnSpySubmit');
+            else if (currentDrawnCard.autoAction === "steal_all_cards") {
+                const stealerId = parseInt(document.getElementById('spy-stealer').value);
+                const targetId = parseInt(document.getElementById('spy-target').value);
 
-            if (stealerId && targetId && stealerId !== targetId) {
-                submitBtn.disabled = false;
-                submitBtn.innerText = "⚡ 執行奪取！";
-                submitBtn.className = "w-full py-3 text-sm font-bold border rounded-lg transition bg-purple-600 hover:bg-purple-700 text-white border-purple-700 shadow-sm";
-            } else {
-                submitBtn.disabled = true;
-                submitBtn.innerText = (stealerId === targetId && stealerId !== "") ? "❌ 發動者與目標不能是同一人" : "請先選擇兩位不同的玩家";
-                submitBtn.className = "w-full py-3 text-sm font-bold border rounded-lg transition bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed shadow-sm";
+                const stealer = players.find(p => p.id === stealerId);
+                const target = players.find(p => p.id === targetId);
+
+                if (!target.cards) target.cards = [];
+                if (!stealer.cards) stealer.cards = [];
+
+                const cardCount = target.cards.length;
+
+                if (cardCount === 0) {
+                    alert(`🤷‍♂️ 撲空了！\n\n${target.name} 手上根本沒有任何功能牌！\n${stealer.name} 什麼都沒搶到，白忙一場。`);
+                } else {
+                    stealer.cards = stealer.cards.concat(target.cards);
+                    target.cards = [];
+
+                    transactionHistory.push({
+                        payerId: 'system',
+                        payeeId: 'multi',
+                        amount: 0,
+                        desc: `🕵️ 商業間諜 - ${stealer.name} 奪取了 ${target.name} 的 ${cardCount} 張功能牌`
+                    });
+
+                    alert(`🕵️ 奪取成功！\n\n${stealer.name} 成功奪取了 ${target.name} 手上的 ${cardCount} 張牌！`);
+                }
             }
-        }
             else if (currentDrawnCard.autoAction === "birthday") {
                 const birthdayPerson = players.find(p => p.id === targetId);
                 const giftAmount = 1000;
