@@ -513,74 +513,40 @@
             if (type === "機會") mType.className = "text-xs font-bold tracking-widest uppercase mb-4 px-3 py-1 rounded-full inline-block bg-amber-100 text-amber-800 border border-amber-300";
             else mType.className = "text-xs font-bold tracking-widest uppercase mb-4 px-3 py-1 rounded-full inline-block bg-blue-100 text-blue-800 border border-blue-300";
 
-           if (currentDrawnCard.keepable) {
+if (currentDrawnCard.keepable) {
                 actionZone.classList.remove('hidden');
                 actionMsg.innerText = "📥 這是一張可保留的功能卡，請選擇保管玩家：";
                 targetContainer.innerHTML = players.map(p => `<button onclick="assignCardToPlayer(${p.id})" class="py-2 text-xs font-medium border rounded-lg transition bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200">交給 ${p.name}</button>`).join('');
-        	} else if (currentDrawnCard.autoAction === "bailout") {
+            } 
+            else if (currentDrawnCard.autoAction === "bailout") {
                 actionZone.classList.remove('hidden');
                 actionMsg.innerText = "💡 這是一張條件觸發卡片：";
                 targetContainer.innerHTML = `<button onclick="executeAutoAction()" class="col-span-2 py-3 text-sm font-bold border rounded-lg transition bg-amber-400 hover:bg-amber-500 text-amber-900 border-amber-500 shadow-sm">⚡ 點擊自動結算</button>`;
-            } else if (currentDrawnCard.autoAction === "birthday") {
+            } 
+            else if (currentDrawnCard.autoAction === "birthday") {
                 actionZone.classList.remove('hidden');
                 actionMsg.innerText = "🎂 請選擇哪一位玩家是今天的壽星：";
                 targetContainer.innerHTML = players.map(p => `<button onclick="executeAutoAction(${p.id})" class="py-2 text-xs font-medium border rounded-lg transition bg-pink-50 hover:bg-pink-100 text-pink-700 border-pink-200">🎉 ${p.name} 是壽星</button>`).join('');
-			} else if (currentDrawnCard.autoAction === "financial_crisis") {
+            } 
+            else if (currentDrawnCard.autoAction === "financial_crisis") {
                 actionZone.classList.remove('hidden');
                 actionMsg.innerText = "💥 災情慘重：";
                 targetContainer.innerHTML = `<button onclick="executeAutoAction()" class="col-span-2 py-3 text-sm font-bold border rounded-lg transition bg-red-600 hover:bg-red-700 text-white border-red-700 shadow-sm">⚡ 點擊執行全體扣款 5,000</button>`;
-		    } else if (currentDrawnCard.autoAction === "asset_liquidation") {
-                let currentMaxMoney = -Infinity;
-                let currentMinMoney = Infinity;
-
-                players.forEach(p => {
-                    if (p.money > currentMaxMoney) currentMaxMoney = p.money;
-                    if (p.money < currentMinMoney) currentMinMoney = p.money;
-                });
-
-                if (currentMaxMoney === currentMinMoney) {
-                    alert("⚖️ 資產清算結果：\n目前所有玩家的現金居然一模一樣多！無須進行轉帳。");
-                } else {
-                    const maxPlayers = players.filter(p => p.money === currentMaxMoney);
-                    const minPlayers = players.filter(p => p.money === currentMinMoney);
-
-                    const totalAmount = 6000; 
-                    
-                    const costPerMaxPlayer = totalAmount / maxPlayers.length; 
-                    const gainPerMinPlayer = totalAmount / minPlayers.length; 
-
-                    maxPlayers.forEach(p => {
-                        p.money -= costPerMaxPlayer;
-                    });
-
-                    minPlayers.forEach(p => {
-                        p.money += gainPerMinPlayer;
-                    });
-
-                    const maxNames = maxPlayers.map(p => p.name).join('、');
-                    const minNames = minPlayers.map(p => p.name).join('、');
-                    
-                    transactionHistory.push({
-                        payerId: maxPlayers.length === 1 ? maxPlayers[0].id : 'multi',
-                        payeeId: minPlayers.length === 1 ? minPlayers[0].id : 'multi',
-                        amount: totalAmount,
-                        desc: `⚖️ 資產清算 - [首富] ${maxNames} (各出 $${costPerMaxPlayer}) ➔ [最窮] ${minNames} (各得 $${gainPerMinPlayer})`
-                    });
-
-                    let infoMessage = `⚖️ 資產清算成功！（總額 $${totalAmount}）\n\n`;
-                    infoMessage += `👑 現金最多 (${maxPlayers.length}人平分出資)：\n👉 ${maxNames}（每人各扣除 $${costPerMaxPlayer}）\n\n`;
-                    infoMessage += `📉 現金最少 (${minPlayers.length}人平分分配)：\n👉 ${minNames}（每人各獲得 $${gainPerMinPlayer}）`;
-                    
-                    alert(infoMessage);
-                }
             }
-            } else if (currentDrawnCard.value !== 0) {
+            else if (currentDrawnCard.autoAction === "asset_liquidation") {
+                actionZone.classList.remove('hidden');
+                actionMsg.innerText = "⚖️ 調節貧富差距：";
+                targetContainer.innerHTML = `<button onclick="executeAutoAction()" class="col-span-2 py-3 text-sm font-bold border rounded-lg transition bg-indigo-900 hover:bg-indigo-800 text-white border-indigo-950 shadow-sm">⚡ 點擊自動清算資產</button>`;
+            }
+            // 👈 你卡住的地方就是這一句，下面是它原本該對接的正常邏輯
+            else if (currentDrawnCard.value !== 0) {
                 actionZone.classList.remove('hidden');
                 actionMsg.innerText = "💡 立即結算事件，請選擇執行玩家：";
                 const isFine = currentDrawnCard.value < 0; 
                 const absValue = Math.abs(currentDrawnCard.value);
                 targetContainer.innerHTML = players.map(p => `<button onclick="executeCardPayout(${p.id}, ${currentDrawnCard.value}, false)" class="py-2 text-xs font-medium border rounded-lg transition ${isFine ? 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'}">${p.name} (${isFine ? '扣款' : '領取'} $${absValue})</button>`).join('');
-            } else { 
+            }
+            else { 
                 actionZone.classList.add('hidden'); 
             }            modal.classList.remove('hidden');
         }
@@ -648,12 +614,47 @@
 
                 alert(`💥 金融風暴襲捲！已從所有玩家（共 ${players.length} 位）帳戶各扣除 5,000 元。`);
             }
-            // 【優化精簡】無論執行哪種自動事件，最後都共用這三行來更新畫面與關閉視窗
+			else if (currentDrawnCard.autoAction === "asset_liquidation") {
+                let currentMaxMoney = -Infinity;
+                let currentMinMoney = Infinity;
+                players.forEach(p => {
+                    if (p.money > currentMaxMoney) currentMaxMoney = p.money;
+                    if (p.money < currentMinMoney) currentMinMoney = p.money;
+                });
+
+                if (currentMaxMoney === currentMinMoney) {
+                    alert("⚖️ 資產清算結果：\n目前所有玩家的現金居然一模一樣多！無須進行轉帳。");
+                } else {
+                    const maxPlayers = players.filter(p => p.money === currentMaxMoney);
+                    const minPlayers = players.filter(p => p.money === currentMinMoney);
+                    const totalAmount = 6000; 
+                    const costPerMaxPlayer = totalAmount / maxPlayers.length;  
+                    const gainPerMinPlayer = totalAmount / minPlayers.length;  
+
+                    maxPlayers.forEach(p => { p.money -= costPerMaxPlayer; });
+                    minPlayers.forEach(p => { p.money += gainPerMinPlayer; });
+
+                    const maxNames = maxPlayers.map(p => p.name).join('、');
+                    const minNames = minPlayers.map(p => p.name).join('、');
+                    
+                    transactionHistory.push({
+                        payerId: maxPlayers.length === 1 ? maxPlayers[0].id : 'multi',
+                        payeeId: minPlayers.length === 1 ? minPlayers[0].id : 'multi',
+                        amount: totalAmount,
+                        desc: `⚖️ 資產清算 - [首富] ${maxNames} (各出 $${costPerMaxPlayer}) ➔ [最窮] ${minNames} (各得 $${gainPerMinPlayer})`
+                    });
+
+                    let infoMessage = `⚖️ 資產清算成功！（總額 $${totalAmount}）\n\n`;
+                    infoMessage += `👑 現金最多 (${maxPlayers.length}人平分出資)：\n👉 ${maxNames}（每人各扣除 $${costPerMaxPlayer}）\n\n`;
+                    infoMessage += `📉 現金最少 (${minPlayers.length}人平分分配)：\n👉 ${minNames}（每人各獲得 $${gainPerMinPlayer}）`;
+                    alert(infoMessage);
+                }
+            }
+            
             updateLogUI(); 
             renderGameBoard();
             closeCardModal();
-        }
-        function assignCardToPlayer(playerId) {
+        }        function assignCardToPlayer(playerId) {
             const player = players.find(p => p.id === playerId);
             player.inventory.push({ ...currentDrawnCard });
             const title = currentDrawnCard.text.match(/【(.*?)】/) ? currentDrawnCard.text.match(/【(.*?)】/)[1] : '功能卡';
