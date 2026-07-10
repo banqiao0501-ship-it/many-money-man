@@ -549,7 +549,7 @@ if (currentDrawnCard.keepable) {
                     </label>
                 `).join('') + `
                     <div class="col-span-2 mt-2">
-                        <button id="btnFairShareSubmit" onclick="executeFairShare()" disabled class="w-full py-3 text-sm font-bold border rounded-lg transition bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed shadow-sm">
+                        <button id="btnFairShareSubmit" onclick="executeAutoAction()" disabled class="w-full py-3 text-sm font-bold border rounded-lg transition bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed shadow-sm">
                             請先勾選 2 位玩家
                         </button>
                     </div>
@@ -568,21 +568,22 @@ if (currentDrawnCard.keepable) {
         }
 
 		// 負責即時偵測勾選了幾個玩家，剛好 2 個人時才解鎖按鈕
-        function handleFairShareSelect() {
+function handleFairShareSelect() {
             const checkboxes = document.querySelectorAll('input[name="fairSharePlayers"]:checked');
             const submitBtn = document.getElementById('btnFairShareSubmit');
             
             if (checkboxes.length === 2) {
                 submitBtn.disabled = false;
                 submitBtn.innerText = "⚡ 執行公正平分";
+                submitBtn.setAttribute("onclick", "executeAutoAction()");
                 submitBtn.className = "w-full py-3 text-sm font-bold border rounded-lg transition bg-teal-600 hover:bg-teal-700 text-white border-teal-700 shadow-sm";
             } else {
                 submitBtn.disabled = true;
+                submitBtn.removeAttribute("onclick");
                 submitBtn.innerText = checkboxes.length > 2 ? "❌ 只能選擇 2 位玩家" : "請先勾選 2 位玩家";
                 submitBtn.className = "w-full py-3 text-sm font-bold border rounded-lg transition bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed shadow-sm";
             }
         }
-
 		function executeAutoAction(targetId = null) {
             if (currentDrawnCard.autoAction === "bailout") {
                 let bailoutCount = 0;
