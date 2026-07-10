@@ -515,11 +515,14 @@
                 actionZone.classList.remove('hidden');
                 actionMsg.innerText = "📥 這是一張可保留的功能卡，請選擇保管玩家：";
                 targetContainer.innerHTML = players.map(p => `<button onclick="assignCardToPlayer(${p.id})" class="py-2 text-xs font-medium border rounded-lg transition bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200">交給 ${p.name}</button>`).join('');
-            } else if (currentDrawnCard.autoAction) {
-                // 【新增】如果是全自動事件
+        	} else if (currentDrawnCard.autoAction === "bailout") {
                 actionZone.classList.remove('hidden');
                 actionMsg.innerText = "💡 這是一張條件觸發卡片：";
                 targetContainer.innerHTML = `<button onclick="executeAutoAction()" class="col-span-2 py-3 text-sm font-bold border rounded-lg transition bg-amber-400 hover:bg-amber-500 text-amber-900 border-amber-500 shadow-sm">⚡ 點擊自動結算</button>`;
+            } else if (currentDrawnCard.autoAction === "birthday") {
+                actionZone.classList.remove('hidden');
+                actionMsg.innerText = "🎂 請選擇哪一位玩家是今天的壽星：";
+                targetContainer.innerHTML = players.map(p => `<button onclick="executeAutoAction(${p.id})" class="py-2 text-xs font-medium border rounded-lg transition bg-pink-50 hover:bg-pink-100 text-pink-700 border-pink-200">🎉 ${p.name} 是壽星</button>`).join('');
             } else if (currentDrawnCard.value !== 0) {
                 actionZone.classList.remove('hidden');
                 actionMsg.innerText = "💡 立即結算事件，請選擇執行玩家：";
