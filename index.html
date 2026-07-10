@@ -678,16 +678,16 @@ if (currentDrawnCard.keepable) {
                 const stealer = players.find(p => p.id === stealerId);
                 const target = players.find(p => p.id === targetId);
 
-                if (!target.cards) target.cards = [];
-                if (!stealer.cards) stealer.cards = [];
+                if (!target.inventory) target.inventory = [];
+				if (!stealer.inventory) stealer.inventory = [];
 
-                const cardCount = target.cards.length;
+				const cardCount = target.inventory.length;
 
-                if (cardCount === 0) {
-                    alert(`🤷‍♂️ 撲空了！\n\n${target.name} 手上根本沒有任何功能牌！\n${stealer.name} 什麼都沒搶到，白忙一場。`);
-                } else {
-                    stealer.cards = stealer.cards.concat(target.cards);
-                    target.cards = [];
+				if (cardCount === 0) {
+    				alert(`🤷‍♂️ 撲空了！\n\n${target.name} 手上根本沒有任何功能牌！\n${stealer.name} 什麼都沒搶到，白忙一場。`);
+				} else {
+    				stealer.inventory = stealer.inventory.concat(target.inventory);
+    				target.inventory = [];
 
                     transactionHistory.push({
                         payerId: 'system',
