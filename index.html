@@ -180,7 +180,6 @@
                 { text: "【逆向行駛】\n從現在起開始反方向繞地圖行走(所有人)。", value: 0 },
                 { text: "【拆遷大隊】\n任選一個顏色區塊的所有建築下降1級。", value: 0 },
                 { text: "【強制課稅】\n呼叫稅務局！所有玩家，每擁有一棟房屋上繳 1,000 元給銀行，每擁有一棟旅館上繳 5,000 元給銀行。(請自行計算後手動轉帳)", value: 0 },
-                { text: "【商業間諜】\n指定一位玩家，奪取他手上的所有功能牌。", value: 0 },
                 { text: "【F1賽車】\n下一回合所有玩家的擲骰點數乘2倍。", value: 0 },
                 { text: "【強制導航】\n你可以指定下一位玩家擲骰子的總點數。", value: 0 },
 				{ text: "【罷工抗議】\n指定地圖上任一顏色區塊的土地，在三個回合內「關閉營業」，無法收取過路費，也無法進行任何房屋升級。", value: 0 },
@@ -197,6 +196,7 @@
 				{ text: "【發票中大獎】\n你對中了本期的統一發票特獎！請立刻向銀行領取 3,000 元獎金。", value: 3000 },
 				{ text: "【天降橫財】\n你在路上撿到一個裝滿錢的公事包，等了半天沒人來認領，只好自己收下了。獲得 4,000 元！", value: 4000 },
 				{ text: "【投資分紅】\n你早期投資的AI科技公司股票大漲！銀行發放 5,000 元的現金分紅給你。", value: 5000 },
+				{ text: "【商業間諜】\n指定一位玩家，奪取他手上的所有功能牌。", value: 0, autoAction: "steal_all_cards" },
 				{ text: "【生日派對】\n今天是你的生日！在場的其他每位玩家都必須包 1,000 元紅包給你當作賀禮。", value: 0, autoAction: "birthday" },
 				{ text: "【國家紓困金】\n所有現金低於 5,000 元的玩家，銀行將立刻發放 10,000 元的緊急紓困補助給你！", value: 0, autoAction: "bailout" },
             ],
@@ -575,6 +575,37 @@ if (currentDrawnCard.keepable) {
                     </div>
                 `;
             }
+            else if (currentDrawnCard.autoAction === "steal_all_cards") {
+                actionZone.classList.remove('hidden');
+                actionMsg.innerText = "🕵️ 商業間諜！請指定「發動者」與「奪取目標」：";
+                
+                const options = players.map(p => {
+                    const cardCount = p.cards ? p.cards.length : 0;
+                    return `<option value="${p.id}">👤 ${p.name} (持有 ${cardCount} 張牌)</option>`;
+                }).join('');
+
+                targetContainer.innerHTML = `
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1">🕵️ 竊取者 (誰抽到這張卡)</label>
+                            <select id="spy-stealer" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-purple-500 focus:border-purple-500" onchange="checkSpySelect()">
+                                <option value="">請選擇發動者...</option>
+                                ${options}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1">🎯 目標 (要搶誰的牌)</label>
+                            <select id="spy-target" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-purple-500 focus:border-purple-500" onchange="checkSpySelect()">
+                                <option value="">請選擇目標...</option>
+                                ${options}
+                            </select>
+                        </div>
+                        <button id="btnSpySubmit" onclick="executeAutoAction()" disabled class="w-full mt-2 py-3 text-sm font-bold border rounded-lg transition bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed shadow-sm">
+                            請先選擇兩位不同的玩家
+                        </button>
+                    </div>
+                `;
+            }
             else if (currentDrawnCard.value !== 0) {
                 actionZone.classList.remove('hidden');
                 actionMsg.innerText = "💡 立即結算事件，請選擇執行玩家：";
@@ -628,6 +659,22 @@ function handleFairShareSelect() {
                 }
 
             } 
+			//先放這，我不確定對不對
+			function checkSpySelect() {
+            const stealerId = document.getElementById('spy-stealer').value;
+            const targetId = document.getElementById('spy-target').value;
+            const submitBtn = document.getElementById('btnSpySubmit');
+
+            if (stealerId && targetId && stealerId !== targetId) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "⚡ 執行奪取！";
+                submitBtn.className = "w-full py-3 text-sm font-bold border rounded-lg transition bg-purple-600 hover:bg-purple-700 text-white border-purple-700 shadow-sm";
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.innerText = (stealerId === targetId && stealerId !== "") ? "❌ 發動者與目標不能是同一人" : "請先選擇兩位不同的玩家";
+                submitBtn.className = "w-full py-3 text-sm font-bold border rounded-lg transition bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed shadow-sm";
+            }
+        }
             else if (currentDrawnCard.autoAction === "birthday") {
                 const birthdayPerson = players.find(p => p.id === targetId);
                 const giftAmount = 1000;
@@ -722,6 +769,35 @@ function handleFairShareSelect() {
                 });
 
                 alert(`⚖️ 公平公正公開！\n\n${p1.name} (原本 $${p1.money + (p1.money - splitAmount)}) 與 ${p2.name} (原本 $${p2.money + (p2.money - splitAmount)})\n兩人總資產 $${totalPool} 已重新強制對半平分！\n\n✨ 現兩每人各有現金：$${splitAmount} 元。`);
+            }
+            else if (currentDrawnCard.autoAction === "steal_all_cards") {
+                const stealerId = parseInt(document.getElementById('spy-stealer').value);
+                const targetId = parseInt(document.getElementById('spy-target').value);
+
+                const stealer = players.find(p => p.id === stealerId);
+                const target = players.find(p => p.id === targetId);
+
+                if (!target.cards) target.cards = [];
+                if (!stealer.cards) stealer.cards = [];
+
+                const cardCount = target.cards.length;
+
+                if (cardCount === 0) {
+                    alert(`🤷‍♂️ 撲空了！\n\n${target.name} 手上根本沒有任何功能牌！\n${stealer.name} 什麼都沒搶到，白忙一場。`);
+                } else {
+
+                    stealer.cards = stealer.cards.concat(target.cards);
+                    target.cards = [];
+
+                    transactionHistory.push({
+                        payerId: 'system',
+                        payeeId: 'multi',
+                        amount: 0,
+                        desc: `🕵️ 商業間諜 - ${stealer.name} 奪取了 ${target.name} 的 ${cardCount} 張功能牌`
+                    });
+
+                    alert(`🕵️ 奪取成功！\n\n${stealer.name} 成功奪取了 ${target.name} 手上的 ${cardCount} 張牌！`);
+                }
             }
             
             updateLogUI(); 
