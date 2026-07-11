@@ -56,3 +56,55 @@ function startGame() {
     // 呼叫 UI 渲染主畫面 (這個函數稍後會貼上來)
     renderGameBoard();
 }
+
+// 💰 金流轉帳與核心邏輯
+function selectParticipant(target) {
+    const part = (target === 'bank') ? 'bank' : players.find(p => p.id === target);
+    if (!transferState.payer) { 
+        transferState.payer = part; 
+    } else if (!transferState.payee) { 
+        if (transferState.payer === part) transferState.payer = null; 
+        else { transferState.payee = part; openKeyboard(); }
+    }
+    renderGameBoard();
+}
+
+function executeTransaction() {
+    const amount = parseInt(currentAmountStr);
+    if (amount <= 0) return;
+    
+    if (transferState.payer !== 'bank') transferState.payer.money -= amount;
+    if (transferState.payee !== 'bank') transferState.payee.money += amount;
+    
+    const pName = transferState.payer === 'bank' ? '🏦 銀行' : transferState.payer.name;
+    const pTarget = transferState.payee === 'bank' ? '🏦 銀行' : transferState.payee.name;
+    
+    transactionHistory.push({ 
+        payerId: transferState.payer === 'bank' ? 'bank' : transferState.payer.id, 
+        payeeId: transferState.payee === 'bank' ? 'bank' : transferState.payee.id, 
+        amount: amount, 
+        desc: `💸 轉帳 - ${pName} ➔ ${pTarget} : $${amount.toLocaleString()}` 
+    });
+    
+    checkMysteryCondition(); // 稍後會貼上的神秘事件檢查函數
+    updateLogUI();           // 稍後會貼上的日誌更新函數
+    closeKeyboard();
+}
+
+function handlePassStart() {
+    let amount = 3000;
+    if (isLoanSharkActive) {
+        // 繳交利息
+        if (transferState.payee !== 'bank') transferState.payee.money -= amount;
+        loanSharkPool += amount;
+        transactionHistory.push({ payerId: transferState.payee === 'bank' ? 'bank' : transferState.payee.id, payeeId: 'pool', amount: amount, desc: `🚨 ${transferState.payee === 'bank' ? '銀行' : transferState.payee.name} 繳交高利貸利息 : $3,000` });
+    } else {
+        // 正常通過起點
+        if (transferState.payee !== 'bank') transferState.payee.money += amount;
+        transactionHistory.push({ payerId: 'bank', payeeId: transferState.payee === 'bank' ? 'bank' : transferState.payee.id, amount: amount, desc: `🏁 🏦 銀行 ➔ ${transferState.payee === 'bank' ? '銀行' : transferState.payee.name} (通過起點) : $3,000` });
+    }
+    
+    checkMysteryCondition();
+    updateLogUI();
+    closeKeyboard();
+}
