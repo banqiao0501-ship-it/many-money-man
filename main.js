@@ -399,3 +399,102 @@ function claimLoanShark() {
     updateLogUI();
     renderGameBoard();
 }
+
+// 🎲 線上骰子系統
+function rollDice() {
+    if (isRolling) return;
+    isRolling = true;
+
+    const dice1El = document.getElementById('dice-1');
+    const dice2El = document.getElementById('dice-2');
+    const resultText = document.getElementById('dice-result-text');
+    
+    let rolls = 0;
+    const maxRolls = 10; 
+    
+    dice1El.style.transform = `rotate(${Math.random() * 30 - 15}deg)`;
+    dice2El.style.transform = `rotate(${Math.random() * 30 - 15}deg)`;
+
+    const rollInterval = setInterval(() => {
+        let tempVal1 = Math.floor(Math.random() * 6);
+        let tempVal2 = Math.floor(Math.random() * 6);
+        
+        dice1El.innerText = DICE_FACES[tempVal1];
+        dice2El.innerText = DICE_FACES[tempVal2];
+        resultText.innerText = "擲骰中...";
+        resultText.className = "text-base font-bold text-gray-400 h-6";
+        
+        rolls++;
+
+        if (rolls >= maxRolls) {
+            clearInterval(rollInterval);
+            
+            const finalVal1 = Math.floor(Math.random() * 6);
+            const finalVal2 = Math.floor(Math.random() * 6);
+            
+            dice1El.innerText = DICE_FACES[finalVal1];
+            dice2El.innerText = DICE_FACES[finalVal2];
+            
+            dice1El.style.transform = `rotate(0deg)`;
+            dice2El.style.transform = `rotate(0deg)`;
+            
+            const total = (finalVal1 + 1) + (finalVal2 + 1);
+            let text = `點數：${total}`;
+            
+            if (finalVal1 === finalVal2) {
+                text += " (雙骰！)";
+                resultText.className = "text-base font-bold text-red-500 h-6";
+            } else {
+                resultText.className = "text-base font-bold text-gray-800 h-6";
+            }
+            
+            resultText.innerText = text;
+            isRolling = false;
+        }
+    }, 60); 
+}
+
+// 📜 紀錄與通用工具 (Undo系統)
+function updateLogUI() {
+    const list = document.getElementById('log-list');
+    list.innerHTML = transactionHistory.slice().reverse().map((t, i) => 
+        `<div class="bg-gray-50 p-2 rounded border border-gray-100 text-gray-600">${t.desc}</div>`
+    ).join('');
+}
+
+function toggleLog() { 
+    document.getElementById('log-panel').classList.toggle('hidden'); 
+}
+
+function undoLastTransaction() {
+    if (transactionHistory.length === 0) return alert("沒有可以復原的紀錄了！");
+    
+    const lastTx = transactionHistory.pop();
+    
+    if (lastTx.amount === 0 && lastTx.desc.includes("收下")) {
+        const p = players.find(x => x.id === lastTx.payerId);
+        p.inventory.pop();
+    } else if (lastTx.amount > 0) {
+        if (lastTx.payerId === 'pool') {
+            loanSharkPool += lastTx.amount;
+            isLoanSharkActive = true;
+            if (lastTx.payeeId !== 'bank' && lastTx.payeeId !== 'pool') {
+                players.find(p => p.id === lastTx.payeeId).money -= lastTx.amount;
+            }
+        } else if (lastTx.payeeId === 'pool') {
+            loanSharkPool -= lastTx.amount;
+            if (lastTx.payerId !== 'bank' && lastTx.payerId !== 'pool') {
+                players.find(p => p.id === lastTx.payerId).money += lastTx.amount;
+            }
+        } else {
+            if (lastTx.payerId !== 'bank') {
+                players.find(p => p.id === lastTx.payerId).money += lastTx.amount;
+            }
+            if (lastTx.payeeId !== 'bank') {
+                players.find(p => p.id === lastTx.payeeId).money -= lastTx.amount;
+            }
+        }
+    }
+    updateLogUI(); 
+    renderGameBoard();
+}
