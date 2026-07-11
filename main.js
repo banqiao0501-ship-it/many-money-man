@@ -353,16 +353,19 @@ function checkMysteryCondition() {
 }
 
 function triggerMysteryEvent() {
-    const event = MYSTERY_EVENTS[Math.floor(Math.random() * MYSTERY_EVENTS.length)];
+    const randomIndex = Math.floor(Math.random() * MYSTERY_EVENTS.length);
+    const event = MYSTERY_EVENTS[randomIndex];
+    
     document.getElementById('mystery-modal-text').innerHTML = event.text.replace(/\n/g, '<br>');
     document.getElementById('mystery-modal').classList.remove('hidden');
     
     if (event.id === 'loan_shark') {
         isLoanSharkActive = true;
         loanSharkPool = 0;
+        
+        MYSTERY_EVENTS.splice(randomIndex, 1);
     }
 
-    // 重置計數器與新目標
     mysteryX = 0;
     const count = players.length;
     const minN = count;
@@ -377,29 +380,34 @@ function closeMysteryModal() {
 }
 
 function claimLoanShark() {
-    if (!transferState.payee || transferState.payee === 'bank') {
+    const selectElement = document.getElementById('loan-shark-receiver');
+    const targetPlayerId = selectElement ? selectElement.value : null;
+
+    if (!targetPlayerId) {
         alert("請先選擇要提領全額的【收款方】玩家！");
         return;
     }
     
-    const player = transferState.payee;
-    player.money += loanSharkPool;
+    const player = players.find(p => p.id === targetPlayerId);
     
-    transactionHistory.push({ 
-        payerId: 'pool', 
-        payeeId: player.id, 
-        amount: loanSharkPool, 
-        desc: `🎊 ${player.name} 提領了高利貸專戶全額 : $${loanSharkPool.toLocaleString()}` 
-    });
+    if (player) {
+        player.money += loanSharkPool;
+        
+        transactionHistory.push({ 
+            payerId: 'pool', 
+            payeeId: player.id, 
+            amount: loanSharkPool, 
+            desc: `🎊 ${player.name} 提領了高利貸專戶全額 : $${loanSharkPool.toLocaleString()}` 
+        });
+    }
     
     isLoanSharkActive = false;
     loanSharkPool = 0;
-    transferState = { payer: null, payee: null };
+    transferState = { payer: null, payee: null }; // 保險起見順便清空轉帳狀態
     
     updateLogUI();
     renderGameBoard();
 }
-
 // 🎲 線上骰子系統
 function rollDice() {
     if (isRolling) return;
