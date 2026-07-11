@@ -232,11 +232,11 @@ function drawCardEvent(type) {
             </div>
         `;
     }
-    else if (currentDrawnCard.autoAction === "steal_all_cards") {
+else if (currentDrawnCard.autoAction === "steal_all_cards") {
         actionZone.classList.remove('hidden');
         actionMsg.innerText = "🕵️ 商業間諜！請指定「發動者」與「奪取目標」：";
         
-        const options = players.map(p => {
+        const spyOptions = players.map(p => {
             const cardCount = p.inventory ? p.inventory.length : 0;
             return `<option value="${p.id}">👤 ${p.name} (持有 ${cardCount} 張牌)</option>`;
         }).join('');
