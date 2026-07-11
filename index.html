@@ -583,7 +583,8 @@ if (currentDrawnCard.keepable) {
                         </button>
                     </div>
                 `;
-            else if (currentDrawnCard.autoAction === "steal_all_cards") {
+			}
+			else if (currentDrawnCard.autoAction === "steal_all_cards") {
                 actionZone.classList.remove('hidden');
                 actionMsg.innerText = "🕵️ 商業間諜！請指定「發動者」與「奪取目標」：";
                 
