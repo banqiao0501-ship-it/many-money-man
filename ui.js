@@ -101,3 +101,50 @@ function renderGameBoard() {
         document.getElementById('loan-shark-ui').classList.remove('flex');
     }
 }
+
+// ⌨️ 數字鍵盤與轉帳介面控制
+function openKeyboard() {
+    document.getElementById('kb-payer-name').innerText = transferState.payer === 'bank' ? '🏦 銀行' : transferState.payer.name;
+    document.getElementById('kb-payee-name').innerText = transferState.payee === 'bank' ? '🏦 銀行' : transferState.payee.name;
+    currentAmountStr = "0"; 
+    updateKeyboardDisplay();
+    
+    const btnStart = document.getElementById('btn-pass-start');
+    if (isLoanSharkActive) {
+        btnStart.innerHTML = "🚨 繳交利息！<br>(-3000)";
+        btnStart.className = "bg-red-50 hover:bg-red-100 text-red-700 font-bold py-2 rounded-lg text-sm border border-red-200 shadow-sm transition";
+    } else {
+        btnStart.innerHTML = "🏁 通過起點！<br>(+3000)";
+        btnStart.className = "bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-2 rounded-lg text-sm border border-indigo-200 shadow-sm transition";
+    }
+    document.getElementById('keyboard-modal').classList.remove('hidden');
+}
+
+function closeKeyboard() { 
+    document.getElementById('keyboard-modal').classList.add('hidden'); 
+    transferState = { payer: null, payee: null }; 
+    renderGameBoard(); 
+}
+
+function updateKeyboardDisplay() { 
+    document.getElementById('kb-display').innerText = parseInt(currentAmountStr).toLocaleString(); 
+}
+
+function pressNum(num) { 
+    if (num === 'C') { 
+        currentAmountStr = "0"; 
+    } else { 
+        if (currentAmountStr === "0") { 
+            if (num === '0' || num === '00') return; 
+            currentAmountStr = num; 
+        } else { 
+            currentAmountStr += num; 
+        } 
+    } 
+    updateKeyboardDisplay(); 
+}
+
+function addAmount(num) { 
+    currentAmountStr = ((parseInt(currentAmountStr) || 0) + num).toString(); 
+    updateKeyboardDisplay(); 
+}
