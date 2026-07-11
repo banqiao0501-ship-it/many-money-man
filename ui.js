@@ -148,3 +148,170 @@ function addAmount(num) {
     currentAmountStr = ((parseInt(currentAmountStr) || 0) + num).toString(); 
     updateKeyboardDisplay(); 
 }
+
+// 🃏 抽卡與手牌系統 (UI顯示)
+function drawCardEvent(type) {
+    const deck = MY_CUSTOM_DECKS[type];
+    currentDrawnCard = deck[Math.floor(Math.random() * deck.length)];
+    
+    const modal = document.getElementById('card-modal');
+    const mType = document.getElementById('card-modal-type');
+    const mText = document.getElementById('card-modal-text');
+    const actionZone = document.getElementById('card-action-zone');
+    const actionMsg = document.getElementById('card-action-msg');
+    const targetContainer = document.getElementById('card-target-players');
+    const closeBtn = document.getElementById('confirm-close-btn'); 
+
+    mText.innerHTML = currentDrawnCard.text.replace(/\n/g, '<br>');
+    mType.innerText = type;
+    
+    if (type === "機會") {
+        mType.className = "text-xs font-bold tracking-widest uppercase mb-4 px-3 py-1 rounded-full inline-block bg-amber-100 text-amber-800 border border-amber-300";
+    } else {
+        mType.className = "text-xs font-bold tracking-widest uppercase mb-4 px-3 py-1 rounded-full inline-block bg-blue-100 text-blue-800 border border-blue-300";
+    }
+
+    // 🎯【新增】防呆大腦：判斷這張卡片是否需要玩家進行互動（選人、扣款或觸發特效）
+    const isInteractive = currentDrawnCard.keepable || 
+                          currentDrawnCard.autoAction || 
+                          currentDrawnCard.value !== 0;
+
+    if (closeBtn) {
+        if (isInteractive) {
+            closeBtn.classList.add('hidden');    // 📥 有互動按鈕 ➔ 隱藏關閉按鈕，防止玩家賴帳不按
+        } else {
+            closeBtn.classList.remove('hidden'); // 📝 純文字卡片 ➔ 顯示關閉按鈕，看完了可以關掉
+        }
+    }
+    
+    if (currentDrawnCard.keepable) {
+        actionZone.classList.remove('hidden');
+        actionMsg.innerText = "📥 這是一張可保留的功能卡，請選擇保管玩家：";
+        targetContainer.innerHTML = players.map(p => `<button onclick="assignCardToPlayer(${p.id})" class="py-2 text-xs font-medium border rounded-lg transition bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200">交給 ${p.name}</button>`).join('');
+    } 
+    else if (currentDrawnCard.autoAction === "bailout") {
+        actionZone.classList.remove('hidden');
+        actionMsg.innerText = "💡 這是一張條件觸發卡片：";
+        targetContainer.innerHTML = `<button onclick="executeAutoAction()" class="col-span-2 py-3 text-sm font-bold border rounded-lg transition bg-amber-400 hover:bg-amber-500 text-amber-900 border-amber-500 shadow-sm">⚡ 點擊自動結算</button>`;
+    } 
+    else if (currentDrawnCard.autoAction === "birthday") {
+        actionZone.classList.remove('hidden');
+        actionMsg.innerText = "🎂 請選擇哪一位玩家是今天的壽星：";
+        targetContainer.innerHTML = players.map(p => `<button onclick="executeAutoAction(${p.id})" class="py-2 text-xs font-medium border rounded-lg transition bg-pink-50 hover:bg-pink-100 text-pink-700 border-pink-200">🎉 ${p.name} 是壽星</button>`).join('');
+    } 
+    else if (currentDrawnCard.autoAction === "financial_crisis") {
+        actionZone.classList.remove('hidden');
+        actionMsg.innerText = "💥 災情慘重：";
+        targetContainer.innerHTML = `<button onclick="executeAutoAction()" class="col-span-2 py-3 text-sm font-bold border rounded-lg transition bg-red-600 hover:bg-red-700 text-white border-red-700 shadow-sm">⚡ 點擊執行全體扣款 5,000</button>`;
+    }
+    else if (currentDrawnCard.autoAction === "asset_liquidation") {
+        actionZone.classList.remove('hidden');
+        actionMsg.innerText = "⚖️ 調節貧富差距：";
+        targetContainer.innerHTML = `<button onclick="executeAutoAction()" class="col-span-2 py-3 text-sm font-bold border rounded-lg transition bg-indigo-900 hover:bg-indigo-800 text-white border-indigo-950 shadow-sm">⚡ 點擊自動清算資產</button>`;
+    }
+    else if (currentDrawnCard.autoAction === "fair_share") {
+        actionZone.classList.remove('hidden');
+        actionMsg.innerText = "⚖️ 財富公道伯降臨！請勾選「2位」要平分資產的玩家：";
+        
+        const playerCheckboxes = players.map(p => `
+            <label class="flex items-center gap-3 p-2 bg-white border border-gray-200 rounded-lg shadow-sm cursor-pointer hover:bg-gray-50 transition">
+                <input type="checkbox" name="fairSharePlayers" value="${p.id}" onchange="handleFairShareSelect()" class="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500">
+                <span class="text-sm font-medium text-gray-700">👤 ${p.name} ($${p.money.toLocaleString()})</span>
+            </label>
+        `).join('');
+
+        targetContainer.innerHTML = `
+            <div class="space-y-3">
+                <div class="grid grid-cols-2 gap-2">
+                    ${playerCheckboxes}
+                </div>
+                
+                <button id="btnFairShareSubmit" disabled class="w-full py-3 text-sm font-bold border rounded-lg transition bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed shadow-sm">
+                    請先勾選 2 位玩家
+                </button>
+            </div>
+        `;
+    }
+    else if (currentDrawnCard.autoAction === "steal_all_cards") {
+        actionZone.classList.remove('hidden');
+        actionMsg.innerText = "🕵️ 商業間諜！請指定「發動者」與「奪取目標」：";
+        
+        const options = players.map(p => {
+            const cardCount = p.inventory ? p.inventory.length : 0;
+            return `<option value="${p.id}">👤 ${p.name} (持有 ${cardCount} 張牌)</option>`;
+        }).join('');
+
+        targetContainer.innerHTML = `
+            <div class="flex items-center gap-4 w-full">
+                <div class="w-2/3 space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">🕵️ 竊取者 (誰抽到這張卡)</label>
+                        <select id="spy-stealer" class="w-full p-2 text-sm border border-gray-300 rounded-lg bg-white shadow-sm focus:ring-purple-500 focus:border-purple-500" onchange="checkSpySelect()">
+                            <option value="">選擇發動者...</option>
+                            ${spyOptions}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">🎯 目標 (要搶誰的牌)</label>
+                        <select id="spy-target" class="w-full p-2 text-sm border border-gray-300 rounded-lg bg-white shadow-sm focus:ring-purple-500 focus:border-purple-500" onchange="checkSpySelect()">
+                            <option value="">選擇目標...</option>
+                            ${spyOptions}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="w-1/3">
+                    <button id="btnSpySubmit" onclick="executeAutoAction()" disabled class="w-full h-[115px] flex flex-col items-center justify-center text-center text-xs font-bold border rounded-xl transition bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed shadow-sm p-1 leading-normal">
+                        請先<br>選擇<br>2位玩家
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+    else if (currentDrawnCard.value !== 0) {
+        actionZone.classList.remove('hidden');
+        actionMsg.innerText = "💡 立即結算事件，請選擇執行玩家：";
+        const isFine = currentDrawnCard.value < 0; 
+        const absValue = Math.abs(currentDrawnCard.value);
+        targetContainer.innerHTML = players.map(p => `<button onclick="executeCardPayout(${p.id}, ${currentDrawnCard.value}, false)" class="py-2 text-xs font-medium border rounded-lg transition ${isFine ? 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'}">${p.name} (${isFine ? '扣款' : '領取'} $${absValue})</button>`).join('');
+    }
+    else { 
+        actionZone.classList.add('hidden'); 
+    }            
+    
+    modal.classList.remove('hidden');
+}
+
+function checkSpySelect() {
+    const stealerId = document.getElementById('spy-stealer').value;
+    const targetId = document.getElementById('spy-target').value;
+    const submitBtn = document.getElementById('btnSpySubmit');
+
+    if (stealerId && targetId && stealerId !== targetId) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = "⚡<br>執行<br>奪取！";
+        submitBtn.className = "w-full h-full flex flex-col items-center justify-center text-center text-base font-bold border rounded-xl transition bg-purple-600 hover:bg-purple-700 text-white border-purple-700 shadow-sm leading-relaxed p-2";
+    } else {
+        submitBtn.disabled = true;
+        const errorMsg = (stealerId === targetId && stealerId !== "") ? "❌<br>不能<br>選自己" : "請先<br>選擇<br>2位";
+        submitBtn.innerHTML = errorMsg;
+        submitBtn.className = "w-full h-full flex flex-col items-center justify-center text-center text-sm font-bold border rounded-xl transition bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed shadow-sm leading-relaxed p-2";
+    }
+}
+
+function handleFairShareSelect() {
+    const checkboxes = document.querySelectorAll('input[name="fairSharePlayers"]:checked');
+    const submitBtn = document.getElementById('btnFairShareSubmit');
+    
+    if (checkboxes.length === 2) {
+        submitBtn.disabled = false;
+        submitBtn.innerText = "⚡ 執行公正平分";
+        submitBtn.setAttribute("onclick", "executeAutoAction()");
+        submitBtn.className = "w-full py-3 text-sm font-bold border rounded-lg transition bg-teal-600 hover:bg-teal-700 text-white border-teal-700 shadow-sm";
+    } else {
+        submitBtn.disabled = true;
+        submitBtn.removeAttribute("onclick");
+        submitBtn.innerText = checkboxes.length > 2 ? "❌ 只能選擇 2 位玩家" : "請先勾選 2 位玩家";
+        submitBtn.className = "w-full py-3 text-sm font-bold border rounded-lg transition bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed shadow-sm";
+    }
+}
