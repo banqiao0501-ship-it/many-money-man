@@ -558,32 +558,27 @@ if (currentDrawnCard.keepable) {
             }
 			else if (currentDrawnCard.autoAction === "fair_share") {
                 actionZone.classList.remove('hidden');
-                actionMsg.innerText = "⚖️ 請選擇要進行平分的兩位玩家：";
+                actionMsg.innerText = "⚖️ 財富公道伯降臨！請勾選「2位」要平分資產的玩家：";
+                
+                const playerCheckboxes = players.map(p => `
+                    <label class="flex items-center gap-3 p-2 bg-white border border-gray-200 rounded-lg shadow-sm cursor-pointer hover:bg-gray-50 transition">
+                        <input type="checkbox" name="fairSharePlayers" value="${p.id}" onchange="handleFairShareSelect()" class="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500">
+                        <span class="text-sm font-medium text-gray-700">👤 ${p.name} ($${p.money.toLocaleString()})</span>
+                    </label>
+                `).join('');
+
                 targetContainer.innerHTML = `
-                    <div class="grid grid-cols-[1fr_100px] gap-4 items-stretch">
-                        <div class="space-y-3 min-w-0">
-                            <div>
-                                <label class="block text-xs font-bold text-gray-500 mb-1 truncate">🕵️ 竊取者 (誰抽到這張卡)</label>
-                                <select id="spy-stealer" class="w-full p-2 text-sm border rounded-lg bg-white shadow-sm focus:ring-purple-500 focus:border-purple-500" onchange="checkSpySelect()">
-                                    <option value="">選擇發動者...</option>
-                                    ${options}
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-gray-500 mb-1 truncate">🎯 目標 (要搶誰的牌)</label>
-                                <select id="spy-target" class="w-full p-2 text-sm border rounded-lg bg-white shadow-sm focus:ring-purple-500 focus:border-purple-500" onchange="checkSpySelect()">
-                                    <option value="">選擇目標...</option>
-                                    ${options}
-                                </select>
-                            </div>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-2">
+                            ${playerCheckboxes}
                         </div>
                         
-                        <button id="btnSpySubmit" onclick="executeAutoAction()" disabled class="w-full h-full flex flex-col items-center justify-center text-center text-sm font-bold border rounded-xl transition bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed shadow-sm leading-relaxed p-2">
-                            請先<br>選擇<br>2位
+                        <button id="btnFairShareSubmit" disabled class="w-full py-3 text-sm font-bold border rounded-lg transition bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed shadow-sm">
+                            請先勾選 2 位玩家
                         </button>
                     </div>
                 `;
-			}
+            }
 			else if (currentDrawnCard.autoAction === "steal_all_cards") {
                 actionZone.classList.remove('hidden');
                 actionMsg.innerText = "🕵️ 商業間諜！請指定「發動者」與「奪取目標」：";
