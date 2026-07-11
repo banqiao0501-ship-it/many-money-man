@@ -133,3 +133,131 @@ function executeAutoAction(targetId = null) {
             alert(`🤷‍♂️ 結算完成！但目前沒有任何玩家的現金低於 5,000 元，無人獲得補助。`);
         }
     }
+    else if (currentDrawnCard.autoAction === "steal_all_cards") {
+        const stealerId = parseInt(document.getElementById('spy-stealer').value);
+        const targetId = parseInt(document.getElementById('spy-target').value);
+
+        const stealer = players.find(p => p.id === stealerId);
+        const target = players.find(p => p.id === targetId);
+
+        if (!target.inventory) target.inventory = [];
+        if (!stealer.inventory) stealer.inventory = [];
+
+        const cardCount = target.inventory.length;
+
+        if (cardCount === 0) {
+            alert(`🤷‍♂️ 撲空了！\n\n${target.name} 手上根本沒有任何功能牌！\n${stealer.name} 什麼都沒搶到，白忙一場。`);
+        } else {
+            stealer.inventory = stealer.inventory.concat(target.inventory);
+            target.inventory = [];
+
+            transactionHistory.push({
+                payerId: 'system',
+                payeeId: 'multi',
+                amount: 0,
+                desc: `🕵️ 商業間諜 - ${stealer.name} 奪取了 ${target.name} 的 ${cardCount} 張功能牌`
+            });
+
+            alert(`🕵️ 奪取成功！\n\n${stealer.name} 成功奪取了 ${target.name} 手上的 ${cardCount} 張牌！`);
+        }
+    }
+    else if (currentDrawnCard.autoAction === "birthday") {
+        const birthdayPerson = players.find(p => p.id === targetId);
+        const giftAmount = 1000;
+        const totalGifts = (players.length - 1) * giftAmount; 
+
+        players.forEach(p => {
+            if (p.id !== targetId) {
+                p.money -= giftAmount;
+                transactionHistory.push({
+                    payerId: p.id,
+                    payeeId: targetId,
+                    amount: giftAmount,
+                    desc: `🎁 賀禮 - ${p.name} ➔ ${birthdayPerson.name} : $1,000`
+                });
+            }
+        });
+
+        birthdayPerson.money += totalGifts;
+        
+        alert(`🎉 生日快樂！已自動從其他 ${players.length - 1} 位玩家帳戶扣除 1,000 元，\n${birthdayPerson.name} 總共收到 ${totalGifts} 元的生日禮金！`);
+    }
+    else if (currentDrawnCard.autoAction === "financial_crisis") {
+        const crisisAmount = 5000;
+        
+        players.forEach(p => {
+            p.money -= crisisAmount;
+            transactionHistory.push({
+                payerId: p.id,
+                payeeId: 'bank',
+                amount: crisisAmount,
+                desc: `📉 金融風暴 - ${p.name} ➔ 🏦 銀行 : $5,000`
+            });
+        });
+
+        alert(`💥 金融風暴襲捲！已從所有玩家（共 ${players.length} 位）帳戶各扣除 5,000 元。`);
+    }
+    else if (currentDrawnCard.autoAction === "asset_liquidation") {
+        let currentMaxMoney = -Infinity;
+        let currentMinMoney = Infinity;
+        players.forEach(p => {
+            if (p.money > currentMaxMoney) currentMaxMoney = p.money;
+            if (p.money < currentMinMoney) currentMinMoney = p.money;
+        });
+
+        if (currentMaxMoney === currentMinMoney) {
+            alert("⚖️ 資產清算結果：\n目前所有玩家的現金居然一模一樣多！無須進行轉帳。");
+        } else {
+            const maxPlayers = players.filter(p => p.money === currentMaxMoney);
+            const minPlayers = players.filter(p => p.money === currentMinMoney);
+            const totalAmount = 6000; 
+            const costPerMaxPlayer = totalAmount / maxPlayers.length;  
+            const gainPerMinPlayer = totalAmount / minPlayers.length;  
+
+            maxPlayers.forEach(p => { p.money -= costPerMaxPlayer; });
+            minPlayers.forEach(p => { p.money += gainPerMinPlayer; });
+
+            const maxNames = maxPlayers.map(p => p.name).join('、');
+            const minNames = minPlayers.map(p => p.name).join('、');
+            
+            transactionHistory.push({
+                payerId: maxPlayers.length === 1 ? maxPlayers[0].id : 'multi',
+                payeeId: minPlayers.length === 1 ? minPlayers[0].id : 'multi',
+                amount: totalAmount,
+                desc: `⚖️ 資產清算 - [首富] ${maxNames} (各出 $${costPerMaxPlayer}) ➔ [最窮] ${minNames} (各得 $${gainPerMinPlayer})`
+            });
+
+            let infoMessage = `⚖️ 資產清算成功！（總額 $${totalAmount}）\n\n`;
+            infoMessage += `👑 現金最多 (${maxPlayers.length}人平分出資)：\n👉 ${maxNames}（每人各扣除 $${costPerMaxPlayer}）\n\n`;
+            infoMessage += `📉 現金最少 (${minPlayers.length}人平分分配)：\n👉 ${minNames}（每人各獲得 $${gainPerMinPlayer}）`;
+            alert(infoMessage);
+        }
+    }
+    else if (currentDrawnCard.autoAction === "fair_share") {
+        const checkboxes = document.querySelectorAll('input[name="fairSharePlayers"]:checked');
+        const id1 = parseInt(checkboxes[0].value);
+        const id2 = parseInt(checkboxes[1].value);
+
+        const p1 = players.find(p => p.id === id1);
+        const p2 = players.find(p => p.id === id2);
+
+        const totalPool = p1.money + p2.money;
+        const splitAmount = totalPool / 2;
+
+        p1.money = splitAmount;
+        p2.money = splitAmount;
+
+        transactionHistory.push({
+            payerId: 'system',
+            payeeId: 'multi',
+            amount: totalPool,
+            desc: `⚖️ 公平平分 - ${p1.name} 與 ${p2.name} 資產重組，每人各持 $${splitAmount}`
+        });
+
+        alert(`⚖️ 公平公正公開！\n\n${p1.name} (原本 $${p1.money + (p1.money - splitAmount)}) 與 ${p2.name} (原本 $${p2.money + (p2.money - splitAmount)})\n兩人總資產 $${totalPool} 已重新強制對半平分！\n\n✨ 現兩每人各有現金：$${splitAmount} 元。`);
+    }
+
+    updateLogUI(); 
+    renderGameBoard();
+    closeCardModal();
+}
