@@ -261,3 +261,141 @@ function executeAutoAction(targetId = null) {
     renderGameBoard();
     closeCardModal();
 }
+
+// 🃏 卡牌後續處理與手牌操作
+function assignCardToPlayer(playerId) {
+    const player = players.find(p => p.id === playerId);
+    player.inventory.push({ ...currentDrawnCard });
+    const title = currentDrawnCard.text.match(/【(.*?)】/) ? currentDrawnCard.text.match(/【(.*?)】/)[1] : '功能卡';
+    transactionHistory.push({ 
+        payerId: playerId, 
+        payeeId: playerId, 
+        amount: 0, 
+        desc: `📥 ${player.name} 收下 [${title}]` 
+    });
+    updateLogUI(); 
+    renderGameBoard(); 
+    closeCardModal();
+}
+
+function viewPlayerCard(playerId, idx) {
+    const player = players.find(p => p.id === playerId);
+    viewingHandCard = { playerId: playerId, idx: idx, card: player.inventory[idx] };
+    document.getElementById('hc-owner').innerText = player.name + " 的手牌";
+    document.getElementById('hc-text').innerHTML = viewingHandCard.card.text.replace(/\n/g, '<br>');
+    document.getElementById('hand-card-modal').classList.remove('hidden');
+}
+
+function closeHandCardModal() { 
+    document.getElementById('hand-card-modal').classList.add('hidden'); 
+}
+
+function useHandCard() {
+    const { playerId, idx, card } = viewingHandCard;
+    const player = players.find(p => p.id === playerId);
+    const title = card.text.match(/【(.*?)】/) ? card.text.match(/【(.*?)】/)[1] : '功能卡';
+    
+    player.inventory.splice(idx, 1);
+    
+    if (card.value !== 0) { 
+        executeCardPayout(playerId, card.value, true, title); 
+    } else { 
+        transactionHistory.push({ 
+            payerId: playerId, 
+            payeeId: playerId, 
+            amount: 0, 
+            desc: `✨ ${player.name} 發動了 [${title}]` 
+        }); 
+        updateLogUI(); 
+        renderGameBoard(); 
+    }
+    closeHandCardModal();
+}
+
+function executeCardPayout(playerId, value, isFromHand = false, cardName = "") {
+    const player = players.find(p => p.id === playerId);
+    const absValue = Math.abs(value);
+    const prefix = isFromHand ? `✨ 發動 [${cardName}]` : `🃏 抽卡事件`;
+    
+    if (value < 0) {
+        player.money -= absValue;
+        transactionHistory.push({ 
+            payerId: playerId, 
+            payeeId: 'bank', 
+            amount: absValue, 
+            desc: `${prefix} - ${player.name} ➔ 🏦 銀行 : $${absValue.toLocaleString()}` 
+        });
+    } else {
+        player.money += absValue;
+        transactionHistory.push({ 
+            payerId: 'bank', 
+            payeeId: playerId, 
+            amount: absValue, 
+            desc: `${prefix} - 🏦 銀行 ➔ ${player.name} : $${absValue.toLocaleString()}` 
+        });
+    }
+    updateLogUI(); 
+    renderGameBoard();
+    if(!isFromHand) closeCardModal(); 
+}
+
+function closeCardModal() { 
+    document.getElementById('card-modal').classList.add('hidden'); 
+}
+
+// 👻 神秘事件系統
+function checkMysteryCondition() {
+    if (!isMysteryMode) return;
+    mysteryX++;
+    if (mysteryX >= mysteryN) {
+        triggerMysteryEvent();
+    }
+}
+
+function triggerMysteryEvent() {
+    const event = MYSTERY_EVENTS[Math.floor(Math.random() * MYSTERY_EVENTS.length)];
+    document.getElementById('mystery-modal-text').innerHTML = event.text.replace(/\n/g, '<br>');
+    document.getElementById('mystery-modal').classList.remove('hidden');
+    
+    if (event.id === 'loan_shark') {
+        isLoanSharkActive = true;
+        loanSharkPool = 0;
+    }
+
+    // 重置計數器與新目標
+    mysteryX = 0;
+    const count = players.length;
+    const minN = count;
+    const maxN = Math.min(count * 3, 20);
+    mysteryN = Math.floor(Math.random() * (maxN - minN + 1)) + minN;
+    
+    renderGameBoard();
+}
+
+function closeMysteryModal() { 
+    document.getElementById('mystery-modal').classList.add('hidden'); 
+}
+
+function claimLoanShark() {
+    if (!transferState.payee || transferState.payee === 'bank') {
+        alert("請先選擇要提領全額的【收款方】玩家！");
+        return;
+    }
+    
+    const player = transferState.payee;
+    player.money += loanSharkPool;
+    
+    transactionHistory.push({ 
+        payerId: 'pool', 
+        payeeId: player.id, 
+        amount: loanSharkPool, 
+        desc: `🎊 ${player.name} 提領了高利貸專戶全額 : $${loanSharkPool.toLocaleString()}` 
+    });
+    
+    isLoanSharkActive = false;
+    loanSharkPool = 0;
+    transferState = { payer: null, payee: null };
+    
+    updateLogUI();
+    renderGameBoard();
+}
