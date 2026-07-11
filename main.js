@@ -108,3 +108,28 @@ function handlePassStart() {
     updateLogUI();
     closeKeyboard();
 }
+
+// 🃏 抽卡與手牌系統 (核心邏輯)
+function executeAutoAction(targetId = null) {
+    if (currentDrawnCard.autoAction === "bailout") {
+        let bailoutCount = 0;
+        
+        players.forEach(p => {
+            if (p.money < 5000) {
+                p.money += 10000;
+                transactionHistory.push({ 
+                    payerId: 'bank', 
+                    payeeId: p.id, 
+                    amount: 10000, 
+                    desc: `🏥 紓困補助 - 🏦 銀行 ➔ ${p.name} : $10,000` 
+                });
+                bailoutCount++;
+            }
+        });
+
+        if (bailoutCount > 0) {
+            alert(`✅ 結算完成！已自動為 ${bailoutCount} 位符合資格的玩家發放 10,000 元。`);
+        } else {
+            alert(`🤷‍♂️ 結算完成！但目前沒有任何玩家的現金低於 5,000 元，無人獲得補助。`);
+        }
+    }
