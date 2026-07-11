@@ -289,14 +289,18 @@ function checkSpySelect() {
     const submitBtn = document.getElementById('btnSpySubmit');
 
     if (stealerId && targetId && stealerId !== targetId) {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = "⚡<br>執行<br>奪取！";
-        submitBtn.className = "w-full h-full flex flex-col items-center justify-center text-center text-base font-bold border rounded-xl transition bg-purple-600 hover:bg-purple-700 text-white border-purple-700 shadow-sm leading-relaxed p-2";
+        btn.disabled = false;
+        btn.className = "w-full h-full min-h-[90px] flex flex-col items-center justify-center text-center text-sm font-bold border rounded-xl transition bg-purple-600 text-white border-purple-700 hover:bg-purple-700 shadow-md p-2 leading-normal";
+        btn.innerHTML = "確認<br>奪取";
     } else {
-        submitBtn.disabled = true;
-        const errorMsg = (stealerId === targetId && stealerId !== "") ? "❌<br>不能<br>選自己" : "請先<br>選擇<br>2位";
-        submitBtn.innerHTML = errorMsg;
-        submitBtn.className = "w-full h-full flex flex-col items-center justify-center text-center text-sm font-bold border rounded-xl transition bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed shadow-sm leading-relaxed p-2";
+        btn.disabled = true;
+        btn.className = "w-full h-full min-h-[90px] flex flex-col items-center justify-center text-center text-sm font-bold border rounded-xl transition bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed shadow-sm p-2 leading-normal";
+        
+        if (stealerId && targetId && stealerId === targetId) {
+            btn.innerHTML = "不能<br>搶自己";
+        } else {
+            btn.innerHTML = "請先<br>選擇<br>玩家";
+        }
     }
 }
 
