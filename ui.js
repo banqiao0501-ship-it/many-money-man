@@ -243,30 +243,25 @@ else if (currentDrawnCard.autoAction === "steal_all_cards") {
         }).join('');
 
         targetContainer.innerHTML = `
-            <div class="grid grid-cols-3 gap-3 w-full items-stretch">
-                
-                <div class="col-span-2 space-y-3">
-                    <div>
-                        <label class="block text-sm font-bold text-gray-600 mb-1">🕵️ 發動者</label>
-                        <select id="spy-stealer" class="w-full p-2 text-sm border border-gray-300 rounded-lg bg-white shadow-sm focus:ring-purple-500 focus:border-purple-500" onchange="checkSpySelect()">
-                            <option value="">選擇發動者...</option>
-                            ${spyOptions}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold text-gray-600 mb-1">🎯 奪取目標</label>
-                        <select id="spy-target" class="w-full p-2 text-sm border border-gray-300 rounded-lg bg-white shadow-sm focus:ring-purple-500 focus:border-purple-500" onchange="checkSpySelect()">
-                            <option value="">選擇目標...</option>
-                            ${spyOptions}
-                        </select>
-                    </div>
+            <div class="flex flex-col gap-3 w-full">
+                <div>
+                    <label class="block text-sm font-bold text-gray-600 mb-1">🕵️ 發動者</label>
+                    <select id="spy-stealer" class="w-full p-2 text-sm border border-gray-300 rounded-lg bg-white shadow-sm focus:ring-purple-500 focus:border-purple-500" onchange="checkSpySelect()">
+                        <option value="">選擇發動者...</option>
+                        ${spyOptions}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-600 mb-1">🎯 奪取目標</label>
+                    <select id="spy-target" class="w-full p-2 text-sm border border-gray-300 rounded-lg bg-white shadow-sm focus:ring-purple-500 focus:border-purple-500" onchange="checkSpySelect()">
+                        <option value="">選擇目標...</option>
+                        ${spyOptions}
+                    </select>
                 </div>
                 
-                <div class="col-span-1 flex">
-                    <button id="btnSpySubmit" onclick="executeAutoAction()" disabled class="w-full h-full min-h-[90px] flex flex-col items-center justify-center text-center text-sm font-bold border rounded-xl transition bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed shadow-sm p-2 leading-normal">
-                        請先<br>選擇<br>玩家
-                    </button>
-                </div>
+                <button id="btnSpySubmit" onclick="executeAutoAction()" disabled class="w-full py-3 mt-2 text-center text-sm font-bold border rounded-xl transition bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed shadow-sm">
+                    請先選擇 2 位玩家
+                </button>
             </div>
         `;
     }
@@ -287,20 +282,22 @@ else if (currentDrawnCard.autoAction === "steal_all_cards") {
 function checkSpySelect() {
     const stealerId = document.getElementById('spy-stealer').value;
     const targetId = document.getElementById('spy-target').value;
-    const submitBtn = document.getElementById('btnSpySubmit');
-
+    const btn = document.getElementById('btnSpySubmit');
+    
+    if (!btn) return; 
+    
     if (stealerId && targetId && stealerId !== targetId) {
         btn.disabled = false;
-        btn.className = "w-full h-full min-h-[90px] flex flex-col items-center justify-center text-center text-sm font-bold border rounded-xl transition bg-purple-600 text-white border-purple-700 hover:bg-purple-700 shadow-md p-2 leading-normal";
-        btn.innerHTML = "確認<br>奪取";
+        btn.className = "w-full py-3 mt-2 text-center text-base font-bold border rounded-xl transition bg-purple-600 text-white border-purple-700 hover:bg-purple-700 shadow-md";
+        btn.innerHTML = "確認奪取";
     } else {
         btn.disabled = true;
-        btn.className = "w-full h-full min-h-[90px] flex flex-col items-center justify-center text-center text-sm font-bold border rounded-xl transition bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed shadow-sm p-2 leading-normal";
+        btn.className = "w-full py-3 mt-2 text-center text-sm font-bold border rounded-xl transition bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed shadow-sm";
         
         if (stealerId && targetId && stealerId === targetId) {
-            btn.innerHTML = "不能<br>搶自己";
+            btn.innerHTML = "不能搶自己";
         } else {
-            btn.innerHTML = "請先<br>選擇<br>玩家";
+            btn.innerHTML = "請先選擇 2 位玩家";
         }
     }
 }
