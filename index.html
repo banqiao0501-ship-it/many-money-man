@@ -561,7 +561,6 @@ if (currentDrawnCard.keepable) {
                 actionMsg.innerText = "⚖️ 請選擇要進行平分的兩位玩家：";
                 targetContainer.innerHTML = `
                     <div class="grid grid-cols-[1fr_100px] gap-4 items-stretch">
-                        <!-- 左側：兩個下拉選單 (1fr 代表佔滿所有剩下的寬度) -->
                         <div class="space-y-3 min-w-0">
                             <div>
                                 <label class="block text-xs font-bold text-gray-500 mb-1 truncate">🕵️ 竊取者 (誰抽到這張卡)</label>
@@ -579,7 +578,6 @@ if (currentDrawnCard.keepable) {
                             </div>
                         </div>
                         
-                        <!-- 右側：固定 100px 寬度的按鈕，高度自動跟隨左側撐滿 -->
                         <button id="btnSpySubmit" onclick="executeAutoAction()" disabled class="w-full h-full flex flex-col items-center justify-center text-center text-sm font-bold border rounded-xl transition bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed shadow-sm leading-relaxed p-2">
                             請先<br>選擇<br>2位
                         </button>
@@ -638,12 +636,13 @@ if (currentDrawnCard.keepable) {
 
             if (stealerId && targetId && stealerId !== targetId) {
                 submitBtn.disabled = false;
-                submitBtn.innerText = "⚡ 執行奪取！";
-                submitBtn.className = "w-full py-3 text-sm font-bold border rounded-lg transition bg-purple-600 hover:bg-purple-700 text-white border-purple-700 shadow-sm";
+                submitBtn.innerHTML = "⚡<br>執行<br>奪取！";
+                submitBtn.className = "w-full h-full flex flex-col items-center justify-center text-center text-base font-bold border rounded-xl transition bg-purple-600 hover:bg-purple-700 text-white border-purple-700 shadow-sm leading-relaxed p-2";
             } else {
                 submitBtn.disabled = true;
-                submitBtn.innerText = (stealerId === targetId && stealerId !== "") ? "❌ 發動者與目標不能是同一人" : "請先選擇兩位不同的玩家";
-                submitBtn.className = "w-full py-3 text-sm font-bold border rounded-lg transition bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed shadow-sm";
+                const errorMsg = (stealerId === targetId && stealerId !== "") ? "❌<br>不能<br>選自己" : "請先<br>選擇<br>2位";
+                submitBtn.innerHTML = errorMsg;
+                submitBtn.className = "w-full h-full flex flex-col items-center justify-center text-center text-sm font-bold border rounded-xl transition bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed shadow-sm leading-relaxed p-2";
             }
         }
 		function handleFairShareSelect() {
