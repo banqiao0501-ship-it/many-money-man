@@ -44,16 +44,21 @@ function selectColor(playerIdx, colorIdx) {
 
 // 🎲 渲染主遊戲板 (包含玩家卡片、銀行狀態、高利貸)
 function renderGameBoard() {
-    const left = document.getElementById('left-players'), right = document.getElementById('right-players');
-    left.innerHTML = ''; right.innerHTML = '';
+    const left = document.getElementById('left-players');
+    const right = document.getElementById('right-players');
+    left.innerHTML = ''; 
+    right.innerHTML = '';
     
+
+    // 1. 渲染玩家區塊
     players.forEach((p, idx) => {
         let stateBorder = 'border-transparent';
         if (transferState.payer?.id === p.id) stateBorder = 'border-red-500 ring-2 ring-red-500/20';
         if (transferState.payee?.id === p.id) stateBorder = 'border-emerald-500 ring-2 ring-emerald-500/20';
         
-        let inventoryTags = p.inventory.map((c, i) => {
-            const title = c.text.match(/【(.*?)】/) ? c.text.match(/【(.*?)】/)[1] : '卡片';
+        const inventoryTags = p.inventory.map((c, i) => {
+            const match = c.text.match(/【(.*?)】/);
+            const title = match ? match[1] : '卡片';
             return `<button onclick="event.stopPropagation(); viewPlayerCard(${p.id}, ${i})" class="text-[11px] bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 px-2 py-1 rounded-md shadow-sm truncate max-w-[85px] transition">🎟️ ${title}</button>`;
         }).join('');
 
@@ -64,16 +69,21 @@ function renderGameBoard() {
                     <span class="font-bold text-gray-800 text-lg">${p.name}</span>
                     <span class="w-3 h-3 rounded-full mt-1.5" style="background-color:${p.color.raw}"></span>
                 </div>
-                <div class="text-right w-full font-mono font-bold text-2xl mb-2 ${p.money < 0 ? 'text-red-500 animate-pulse':'text-gray-900'}">${p.money < 0 ? '- ':''}$${Math.abs(p.money).toLocaleString()}</div>
+                <div class="text-right w-full font-mono font-bold text-2xl mb-2 ${p.money < 0 ? 'text-red-500 animate-pulse' : 'text-gray-900'}">${p.money < 0 ? '- ' : ''}$${Math.abs(p.money).toLocaleString()}</div>
                 <div class="pl-2 flex flex-wrap gap-1 w-full mt-auto">${inventoryTags}</div>
             </div>`;
+            
         (idx % 2 === 0) ? left.innerHTML += html : right.innerHTML += html;
     });
     
-    // 更新銀行按鈕狀態
-    document.getElementById('btn-bank').className = "w-full max-w-[180px] text-white p-4 rounded-xl text-center font-bold tracking-widest transition " + (transferState.payer === 'bank' ? 'bg-red-600 ring-2 ring-red-500/20' : transferState.payee === 'bank' ? 'bg-emerald-600 ring-2 ring-emerald-500/20' : 'bg-gray-800 hover:bg-gray-700');
+    // 更新銀行按鈕狀態與提示文字
+    const btnBank = document.getElementById('btn-bank');
+    btnBank.className = `w-full max-w-[180px] text-white p-4 rounded-xl text-center font-bold tracking-widest transition ${
+        transferState.payer === 'bank' ? 'bg-red-600 ring-2 ring-red-500/20' : 
+        transferState.payee === 'bank' ? 'bg-emerald-600 ring-2 ring-emerald-500/20' : 
+        'bg-gray-800 hover:bg-gray-700'
+    }`;
     
-    // 更新提示文字
     const prompt = document.getElementById('prompt-msg');
     if (!transferState.payer) { 
         prompt.innerText = "💡 請點擊【付款方】"; 
@@ -83,25 +93,48 @@ function renderGameBoard() {
         prompt.className = "text-sm font-medium text-emerald-500"; 
     }
 
-    // 更新高利貸 UI
+    // 更新高利貸 UI 
+    const loanSharkUi = document.getElementById('loan-shark-ui');
     if (isLoanSharkActive) {
-        document.getElementById('loan-shark-ui').classList.remove('hidden');
-        document.getElementById('loan-shark-ui').classList.add('flex');
-        document.getElementById('loan-shark-amt').innerText = `$${loanSharkPool.toLocaleString()}`;
+        loanSharkUi.classList.remove('hidden');
+        loanSharkUi.classList.add('flex');
         
         if (loanSharkPool >= 15000) {
-            document.getElementById('btn-claim-loan').classList.remove('hidden');
-            document.getElementById('loan-shark-amt').classList.add('text-green-600');
+            const playerOptions = players.map(p => `<option value="${p.id}">👤 ${p.name}</option>`).join('');
+            
+            loanSharkUi.innerHTML = `
+                <div class="flex flex-col items-center justify-center p-4 bg-red-50 border-2 border-red-200 rounded-xl w-full">
+                    <h3 class="font-bold text-red-800 mb-2">🏦 高利貸起點專戶</h3>
+                    <p class="text-2xl font-black text-green-600 mb-4">$${loanSharkPool.toLocaleString()}</p>
+                    
+                    <div class="w-full mb-3">
+                        <label class="block text-xs font-bold text-gray-500 mb-1 text-left">選擇提領玩家：</label>
+                        <select id="loan-shark-receiver" class="w-full p-2 text-sm border border-gray-300 rounded-lg bg-white shadow-sm focus:ring-red-500 focus:border-red-500">
+                            <option value="">請選擇收款方...</option>
+                            ${playerOptions}
+                        </select>
+                    </div>
+                    
+                    <button onclick="claimLoanShark()" class="w-full py-2 text-center text-sm font-bold border rounded-xl transition bg-red-600 text-white border-red-700 hover:bg-red-700 shadow-md">
+                        提領全額 (${loanSharkPool.toLocaleString()})
+                    </button>
+                </div>
+            `;
         } else {
-            document.getElementById('btn-claim-loan').classList.add('hidden');
-            document.getElementById('loan-shark-amt').classList.remove('text-green-600');
+            loanSharkUi.innerHTML = `
+                <div class="flex flex-col items-center justify-center p-4 bg-red-50 border-2 border-red-200 rounded-xl w-full">
+                    <h3 class="font-bold text-red-800 mb-2">🏦 高利貸起點專戶</h3>
+                    <p class="text-2xl font-black text-red-600 mb-2">$${loanSharkPool.toLocaleString()}</p>
+                    <p class="text-xs font-bold text-gray-500">累積滿 $15,000 即可提領</p>
+                </div>
+            `;
         }
     } else {
-        document.getElementById('loan-shark-ui').classList.add('hidden');
-        document.getElementById('loan-shark-ui').classList.remove('flex');
+        loanSharkUi.classList.add('hidden');
+        loanSharkUi.classList.remove('flex');
+        loanSharkUi.innerHTML = '';
     }
 }
-
 // ⌨️ 數字鍵盤與轉帳介面控制
 function openKeyboard() {
     document.getElementById('kb-payer-name').innerText = transferState.payer === 'bank' ? '🏦 銀行' : transferState.payer.name;
